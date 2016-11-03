@@ -1,9 +1,9 @@
 //
-//  trace.swift
-//  tutil
+//  Trace.swift
+//  Nutil
 //
 //  Created by Jamol Bao on 11/12/15.
-//  Copyright © 2015 jamol. All rights reserved.
+//  Copyright © 2015 Jamol Bao. All rights reserved.
 //
 
 import Foundation

@@ -1,9 +1,9 @@
 //
 //  TcpSocket.swift
-//  tutil
+//  Nutil
 //
 //  Created by Jamol Bao on 1/18/16.
-//  Copyright © 2016 jamol. All rights reserved.
+//  Copyright © 2016 Jamol Bao. All rights reserved.
 //
 
 import Foundation
