@@ -51,11 +51,19 @@ func getNameInfo(_ ssaddr: UnsafePointer<sockaddr_storage>) -> (addr: String, po
 func getSockName(_ fd: Int32) -> (addr: String, port: Int) {
     var ssaddr = sockaddr_storage()
     var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
-    let status = withUnsafeMutablePointer(to: &ssaddr) {
-        return $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-            return getsockname(fd, $0, &ssalen)
-        }
+    let psa = ssaddr.asSockaddrPointer()
+    let status = getsockname(fd, psa, &ssalen)
+    if status != 0 {
+        return ("", 0)
     }
+    return getNameInfo(&ssaddr)
+}
+
+func getPeerName(_ fd: Int32) -> (addr: String, port: Int) {
+    var ssaddr = sockaddr_storage()
+    var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+    let psa = ssaddr.asSockaddrPointer()
+    let status = getpeername(fd, psa, &ssalen)
     if status != 0 {
         return ("", 0)
     }
@@ -63,16 +71,16 @@ func getSockName(_ fd: Int32) -> (addr: String, port: Int) {
 }
 
 extension sockaddr_storage {
-    func asSockaddr() -> sockaddr {
-        var ssaddr = self
-        return withUnsafeMutablePointer(to: &ssaddr) {
-            return UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self).pointee
-        }
+    mutating func asSockaddrPointer() -> UnsafeMutablePointer<sockaddr> {
+        let praw = UnsafeMutableRawPointer(&self)
+        return praw.assumingMemoryBound(to: sockaddr.self)
     }
     
     func length() -> socklen_t {
         if Int32(self.ss_family) == AF_INET {
-            return socklen_t(MemoryLayout<sockaddr>.size)
+            return socklen_t(MemoryLayout<sockaddr_in>.size)
+        } else if Int32(self.ss_family) == AF_INET6 {
+            return socklen_t(MemoryLayout<sockaddr_in6>.size)
         } else {
             return socklen_t(MemoryLayout<sockaddr_storage>.size)
         }

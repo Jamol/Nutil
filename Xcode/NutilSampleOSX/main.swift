@@ -27,7 +27,8 @@ class TcpSocketDelegate : TcpDelegate {
 let tcpd = TcpSocketDelegate()
 var tcp = TcpSocket()
 tcp.delegate = tcpd
-let ret = tcp.connect("127.0.0.1", 52328)
+//let ret = tcp.connect("127.0.0.1", 52328)
+let ret = tcp.connect("www.google.com", 80)
 
 
 class AcceptorDelegate : AcceptDelegate {

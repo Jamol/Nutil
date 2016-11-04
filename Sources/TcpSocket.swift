@@ -68,7 +68,7 @@ public class TcpSocket : Socket
     }
     
     private func checkConnecting(fd: Int32) {
-        let status = Nutil.connect(fd, &ssaddr)
+        let status = Darwin.connect(self.fd!, ssaddr.asSockaddrPointer(), ssaddr.length())
         let err = errno
         if status != 0 && err != EISCONN {
             infoTrace("checkConnecting failed: errno=\(err), " + String(validatingUTF8: strerror(err))!)
@@ -110,6 +110,39 @@ public class TcpSocket : Socket
 
 // client socket methods
 extension TcpSocket {
+    public func bind(_ addr: String, _ port: Int) -> Int {
+        infoTrace("TcpSocket.bind, host=\(addr), port=\(port)")
+        var status: Int32 = 0
+        // Protocol configuration
+        var hints = addrinfo(
+            ai_flags: AI_PASSIVE,       // Assign the address of my local host to the socket structures
+            ai_family: AF_UNSPEC,       // Either IPv4 or IPv6
+            ai_socktype: SOCK_DGRAM,
+            ai_protocol: 0,
+            ai_addrlen: 0,
+            ai_canonname: nil,
+            ai_addr: nil,
+            ai_next: nil)
+        
+        var ssaddr = sockaddr_storage()
+        if getAddrInfo(addr, port, &hints, &ssaddr) != 0 {
+            return -1
+        }
+        
+        let fd = socket(Int32(ssaddr.ss_family), SOCK_STREAM, 0)
+        if(fd == -1) {
+            errTrace("TcpSocket.bind, socket failed: " + String(validatingUTF8: strerror(errno))!)
+            return -1
+        }
+        status = Darwin.bind(fd, ssaddr.asSockaddrPointer(), ssaddr.length())
+        if status < 0 {
+            errTrace("TcpSocket.bind, failed: " + String(validatingUTF8: strerror(errno))!)
+            return -1
+        }
+        self.fd = fd
+        return Int(status)
+    }
+    
     public func connect(_ addr: String, _ port: Int) -> Int {
         var hints = addrinfo(
             ai_flags: AI_ADDRCONFIG,
@@ -128,16 +161,19 @@ extension TcpSocket {
         let info = getNameInfo(&ssaddr)
         infoTrace("connect, host=\(addr), ip=\(info.addr), port=\(port)")
         
-        let fd = socket(Int32(ssaddr.ss_family), SOCK_STREAM, 0)
-        if(fd == -1) {
-            errTrace("socket failed: " + String(validatingUTF8: strerror(errno))!)
+        if self.fd == nil {
+            let fd = socket(Int32(ssaddr.ss_family), SOCK_STREAM, 0)
+            if(fd == -1) {
+                errTrace("socket failed: " + String(validatingUTF8: strerror(errno))!)
+                return -1
+            }
+            self.fd = fd
+        }
+        if !initWithFd(self.fd!) {
             return -1
         }
         state = .connecting
-        if !initWithFd(fd) {
-            return -1
-        }
-        var status = Nutil.connect(fd, &ssaddr)
+        var status = Darwin.connect(self.fd!, ssaddr.asSockaddrPointer(), ssaddr.length())
         if status == -1 {
             if wouldBlock(errno) {
                 status = 0
@@ -145,7 +181,7 @@ extension TcpSocket {
                 errTrace("connect failed: " + String(validatingUTF8: strerror(errno))!)
             }
         } else {
-            let info = getSockName(fd)
+            let info = getSockName(self.fd!)
             infoTrace("connect, myaddr=\(info.addr), myport=\(info.port)")
         }
         return Int(status)

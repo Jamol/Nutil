@@ -67,7 +67,7 @@ public class UdpSocket : Socket
             errTrace("UdpSocket.bind, socket failed: " + String(validatingUTF8: strerror(errno))!)
             return -1
         }
-        status = Nutil.bind(fd, &ssaddr)
+        status = Darwin.bind(fd, ssaddr.asSockaddrPointer(), ssaddr.length())
         if status < 0 {
             errTrace("UdpSocket.bind, bind failed: " + String(validatingUTF8: strerror(errno))!)
             return -1
@@ -118,7 +118,8 @@ extension UdpSocket {
         if let fd = self.fd {
             let dlen = len * MemoryLayout<T>.size
             var ssaddr = sockaddr_storage()
-            var ret = Nutil.recvfrom(fd, data, dlen, &ssaddr)
+            var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+            var ret = Darwin.recvfrom(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), &ssalen)
             if ret == 0 {
                 infoTrace("UdpSocket.read, peer closed")
                 ret = -1
@@ -198,7 +199,7 @@ extension UdpSocket {
                 errTrace("UdpSocket.write, invalid address")
                 return -1
             }
-            var ret = Nutil.sendto(fd, data, dlen, &ssaddr)
+            var ret = Darwin.sendto(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), ssaddr.length())
             if ret == 0 {
                 infoTrace("UdpSocket.write, peer closed")
                 ret = -1
@@ -246,11 +247,7 @@ extension UdpSocket {
             
             var mh = msghdr()
             mh.msg_name = UnsafeMutableRawPointer(&ssaddr)
-            if AF_INET == Int32(ssaddr.ss_family) {
-                mh.msg_namelen = socklen_t(MemoryLayout<sockaddr_in>.size)
-            } else {
-                mh.msg_namelen = socklen_t(MemoryLayout<sockaddr_in6>.size)
-            }
+            mh.msg_namelen = ssaddr.length()
             mh.msg_control = nil
             mh.msg_controllen = 0
             mh.msg_flags = 0

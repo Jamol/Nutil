@@ -1,5 +1,5 @@
 //
-//  Listener.swift
+//  Acceptor.swift
 //  Nutil
 //
 //  Created by Jamol Bao on 8/5/15.
@@ -53,7 +53,7 @@ public class Acceptor {
         setNonblocking(fd)
         var val: Int32 = 1
         status  = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val,socklen_t(MemoryLayout<Int32>.size))
-        status = Nutil.bind(fd, &ssaddr)
+        status = Darwin.bind(fd, ssaddr.asSockaddrPointer(), ssaddr.length())
         if status != 0 {
             errTrace("Acceptor.listen, bind failed: " + String(validatingUTF8: strerror(errno))!)
             return false
@@ -111,7 +111,8 @@ public class Acceptor {
         //var ss_addr = UnsafeMutablePointer<sockaddr_storage>.alloc(1)
         var ssaddr = sockaddr_storage()
         repeat {
-            let s = Nutil.accept(fd_, &ssaddr)
+            var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+            let s = Darwin.accept(fd_, ssaddr.asSockaddrPointer(), &ssalen)
             if s != -1 {
                 let info = getNameInfo(&ssaddr)
                 infoTrace("Acceptor.onAccept, fd=\(s), addr=\(info.addr), port=\(info.port)")
