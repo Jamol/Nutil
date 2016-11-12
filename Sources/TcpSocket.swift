@@ -10,7 +10,7 @@ import Foundation
 import Darwin
 
 public protocol TcpDelegate {
-    func onConnect(_ err: Int)
+    func onConnect(_ err: KMError)
     func onRead()
     func onWrite()
     func onClose()
@@ -28,25 +28,22 @@ public class TcpSocket : Socket
         case closed
     }
     
-    fileprivate var state: SocketState = .idle
+    var state: SocketState = .idle
+    public var isOpen: Bool { return state == .open }
     
     public init () {
-        super.init(dq: nil)
+        super.init(queue: nil)
     }
     
-    public init (queue: DispatchQueue?) {
-        super.init(dq: queue)
+    public override init (queue: DispatchQueue?) {
+        super.init(queue: queue)
     }
     
     deinit {
         
     }
     
-    public func isOpen() -> Bool {
-        return state == .open
-    }
-    
-    override internal func processRead(fd: Int32, rsource: DispatchSourceRead) {
+    override internal func processRead(fd: SOCKET_FD, rsource: DispatchSourceRead) {
         if state == .connecting {
             checkConnecting(fd: fd)
         } else {
@@ -59,7 +56,7 @@ public class TcpSocket : Socket
         }
     }
     
-    override internal func processWrite(fd: Int32, wsource: DispatchSourceWrite) {
+    override internal func processWrite(fd: SOCKET_FD, wsource: DispatchSourceWrite) {
         if state == .connecting {
             checkConnecting(fd: fd)
         } else {
@@ -67,23 +64,23 @@ public class TcpSocket : Socket
         }
     }
     
-    private func checkConnecting(fd: Int32) {
-        let status = Darwin.connect(self.fd!, ssaddr.asSockaddrPointer(), ssaddr.length())
+    private func checkConnecting(fd: SOCKET_FD) {
+        let status = Darwin.connect(self.fd, ssaddr.asSockaddrPointer(), ssaddr.length())
         let err = errno
         if status != 0 && err != EISCONN {
             infoTrace("checkConnecting failed: errno=\(err), " + String(validatingUTF8: strerror(err))!)
-            onConnect(Int(err))
+            onConnect(.sockError)
         } else {
             let info = getSockName(fd)
             infoTrace("checkConnecting, myaddr=\(info.addr), myport=\(info.port)")
-            onConnect(0)
+            onConnect(.noError)
         }
     }
     
-    fileprivate func onConnect(_ err: Int) {
-        if err == 0 {
+    fileprivate func onConnect(_ err: KMError) {
+        if err == .noError {
             state = .open
-            delegate?.onConnect(0)
+            delegate?.onConnect(.noError)
         } else {
             cleanup()
             state = .closed
@@ -161,7 +158,7 @@ extension TcpSocket {
         let info = getNameInfo(&ssaddr)
         infoTrace("connect, host=\(addr), ip=\(info.addr), port=\(port)")
         
-        if self.fd == nil {
+        if self.fd == kInvalidSocket {
             let fd = socket(Int32(ssaddr.ss_family), SOCK_STREAM, 0)
             if(fd == -1) {
                 errTrace("socket failed: " + String(validatingUTF8: strerror(errno))!)
@@ -169,11 +166,11 @@ extension TcpSocket {
             }
             self.fd = fd
         }
-        if !initWithFd(self.fd!) {
+        if !initWithFd(self.fd) {
             return -1
         }
         state = .connecting
-        var status = Darwin.connect(self.fd!, ssaddr.asSockaddrPointer(), ssaddr.length())
+        var status = Darwin.connect(self.fd, ssaddr.asSockaddrPointer(), ssaddr.length())
         if status == -1 {
             if wouldBlock(errno) {
                 status = 0
@@ -181,7 +178,7 @@ extension TcpSocket {
                 errTrace("connect failed: " + String(validatingUTF8: strerror(errno))!)
             }
         } else {
-            let info = getSockName(self.fd!)
+            let info = getSockName(self.fd)
             infoTrace("connect, myaddr=\(info.addr), myport=\(info.port)")
         }
         return Int(status)
@@ -190,7 +187,7 @@ extension TcpSocket {
 
 // server socket methods
 extension TcpSocket {
-    public func setFd(_ fd: Int32) -> Int {
+    public func attachFd(_ fd: Int32) -> Int {
         if !initWithFd(fd) {
             return -1
         }
@@ -202,24 +199,22 @@ extension TcpSocket {
 // read methods
 extension TcpSocket {
     public func read<T>(_ data: UnsafeMutablePointer<T>, _ len: Int) -> Int {
-        if state != .open {
+        if state != .open || fd == kInvalidSocket {
             return 0
         }
-        if let fd = self.fd {
-            var ret = Darwin.read(fd, data, len * MemoryLayout<T>.size)
-            if ret == 0 {
-                infoTrace("TcpSocket.read, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("TcpSocket.read, failed, err=\(errno)")
-                }
+
+        var ret = Darwin.read(fd, data, len * MemoryLayout<T>.size)
+        if ret == 0 {
+            infoTrace("TcpSocket.read, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("TcpSocket.read, failed, err=\(errno)")
             }
-            return ret
         }
-        return 0
+        return ret
     }
     
     public func read<T>(_ data: [T]) -> Int {
@@ -265,55 +260,51 @@ extension TcpSocket {
     }
     
     public func write<T>(_ data: UnsafePointer<T>, _ len: Int) -> Int {
-        if state != .open {
+        if state != .open || fd == kInvalidSocket {
             return 0
         }
-        if let fd = self.fd {
-            let wlen = len * MemoryLayout<T>.size
-            var ret = Darwin.write(fd, data, wlen)
-            if ret == 0 {
-                infoTrace("TcpSocket.write, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("TcpSocket.write, failed, err=\(errno)")
-                }
+        
+        let wlen = len * MemoryLayout<T>.size
+        var ret = Darwin.write(fd, data, wlen)
+        if ret == 0 {
+            infoTrace("TcpSocket.write, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("TcpSocket.write, failed, err=\(errno)")
             }
-            if ret < wlen {
-                resumeOnWrite()
-            }
-            return ret
         }
-        return 0
+        if ret < wlen {
+            resumeOnWrite()
+        }
+        return ret
     }
     
-    public func writev(_ ivs: [iovec]) -> Int {
-        if state != .open {
+    public func writev(_ iovs: [iovec]) -> Int {
+        if state != .open || fd == kInvalidSocket {
             return 0
         }
-        if let fd = self.fd {
-            var wlen = 0
-            for i in 0..<ivs.count {
-                wlen += ivs[i].iov_len
-            }
-            var ret = Darwin.writev(fd, ivs, Int32(ivs.count))
-            if ret == 0 {
-                infoTrace("TcpSocket.write, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("TcpSocket.writev, failed, err=\(errno)")
-                }
-            }
-            if ret < wlen {
-                resumeOnWrite()
-            }
-            return ret
+        
+        var wlen = 0
+        for i in 0..<iovs.count {
+            wlen += iovs[i].iov_len
         }
-        return 0
+        var ret = Darwin.writev(fd, iovs, Int32(iovs.count))
+        if ret == 0 {
+            infoTrace("TcpSocket.write, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("TcpSocket.writev, failed, err=\(errno)")
+            }
+        }
+        if ret < wlen {
+            resumeOnWrite()
+        }
+        return ret
     }
 }

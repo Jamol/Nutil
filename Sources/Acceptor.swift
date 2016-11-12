@@ -14,7 +14,7 @@ public protocol AcceptDelegate {
 }
 
 public class Acceptor {
-    private var fd_: Int32 = -1
+    private var fd_: SOCKET_FD = -1
     private var stop_ = false
     private var queue_: DispatchQueue? = nil // serial queue
     private var source_: DispatchSourceRead? = nil

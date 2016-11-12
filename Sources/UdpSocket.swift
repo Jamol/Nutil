@@ -28,11 +28,11 @@ public class UdpSocket : Socket
     fileprivate var state: SocketState = .idle
     
     public init () {
-        super.init(dq: nil)
+        super.init(queue: nil)
     }
     
-    public init (queue: DispatchQueue?) {
-        super.init(dq: queue)
+    public override init (queue: DispatchQueue?) {
+        super.init(queue: queue)
     }
     
     deinit {
@@ -79,7 +79,7 @@ public class UdpSocket : Socket
         return Int(status)
     }
 
-    override internal func processRead(fd: Int32, rsource: DispatchSourceRead) {
+    override internal func processRead(fd: SOCKET_FD, rsource: DispatchSourceRead) {
         let bytesAvailable = rsource.data
         if bytesAvailable > 0 {
             onRead()
@@ -88,7 +88,7 @@ public class UdpSocket : Socket
         }
     }
     
-    override internal func processWrite(fd: Int32, wsource: DispatchSourceWrite) {
+    override internal func processWrite(fd: SOCKET_FD, wsource: DispatchSourceWrite) {
         onWrite()
     }
     
@@ -115,25 +115,25 @@ extension UdpSocket {
         if state != .open {
             return (0, "", 0)
         }
-        if let fd = self.fd {
-            let dlen = len * MemoryLayout<T>.size
-            var ssaddr = sockaddr_storage()
-            var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
-            var ret = Darwin.recvfrom(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), &ssalen)
-            if ret == 0 {
-                infoTrace("UdpSocket.read, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("UdpSocket.read, failed, err=\(errno)")
-                }
-            }
-            let info = getNameInfo(&ssaddr)
-            return (ret, info.addr, info.port)
+        if fd == kInvalidSocket {
+            return (0, "", 0)
         }
-        return (0, "", 0)
+        let dlen = len * MemoryLayout<T>.size
+        var ssaddr = sockaddr_storage()
+        var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+        var ret = Darwin.recvfrom(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), &ssalen)
+        if ret == 0 {
+            infoTrace("UdpSocket.read, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("UdpSocket.read, failed, err=\(errno)")
+            }
+        }
+        let info = getNameInfo(&ssaddr)
+        return (ret, info.addr, info.port)
     }
     
     public func read<T>(_ data: [T]) -> (ret: Int, addr: String, port: Int) {
@@ -182,100 +182,100 @@ extension UdpSocket {
         if state != .open {
             return 0
         }
-        if let fd = self.fd {
-            let dlen = len * MemoryLayout<T>.size
-            var ssaddr = sockaddr_storage()
-            var hints = addrinfo(
-                ai_flags: AI_ADDRCONFIG,
-                ai_family: AF_UNSPEC,
-                ai_socktype: SOCK_DGRAM,
-                ai_protocol: 0,
-                ai_addrlen: 0,
-                ai_canonname: nil,
-                ai_addr: nil,
-                ai_next: nil)
-            let status = getAddrInfo(addr, port, &hints, &ssaddr)
-            if status != 0 {
-                errTrace("UdpSocket.write, invalid address")
-                return -1
-            }
-            var ret = Darwin.sendto(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), ssaddr.length())
-            if ret == 0 {
-                infoTrace("UdpSocket.write, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("UdpSocket.write, failed, err=\(errno)")
-                }
-            }
-            if ret < dlen {
-                resumeOnWrite()
-                errTrace("UdpSocket.write, partial written ???")
-            }
-            return ret
+        if fd == kInvalidSocket {
+            return 0
         }
-        return 0
+        let dlen = len * MemoryLayout<T>.size
+        var ssaddr = sockaddr_storage()
+        var hints = addrinfo(
+            ai_flags: AI_ADDRCONFIG,
+            ai_family: AF_UNSPEC,
+            ai_socktype: SOCK_DGRAM,
+            ai_protocol: 0,
+            ai_addrlen: 0,
+            ai_canonname: nil,
+            ai_addr: nil,
+            ai_next: nil)
+        let status = getAddrInfo(addr, port, &hints, &ssaddr)
+        if status != 0 {
+            errTrace("UdpSocket.write, invalid address")
+            return -1
+        }
+        var ret = Darwin.sendto(fd, data, dlen, 0, ssaddr.asSockaddrPointer(), ssaddr.length())
+        if ret == 0 {
+            infoTrace("UdpSocket.write, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("UdpSocket.write, failed, err=\(errno)")
+            }
+        }
+        if ret < dlen {
+            resumeOnWrite()
+            errTrace("UdpSocket.write, partial written ???")
+        }
+        return ret
     }
     
-    public func writev(_ ivs: [iovec], _ addr: String, _ port: Int) -> Int {
+    public func writev(_ iovs: [iovec], _ addr: String, _ port: Int) -> Int {
         if state != .open {
             return 0
         }
-        if let fd = self.fd {
-            var dlen = 0
-            for i in 0..<ivs.count {
-                dlen += ivs[i].iov_len
-            }
-            
-            var ssaddr = sockaddr_storage()
-            var hints = addrinfo(
-                ai_flags: AI_ADDRCONFIG,
-                ai_family: AF_UNSPEC,
-                ai_socktype: SOCK_DGRAM,
-                ai_protocol: 0,
-                ai_addrlen: 0,
-                ai_canonname: nil,
-                ai_addr: nil,
-                ai_next: nil)
-            let status = getAddrInfo(addr, port, &hints, &ssaddr)
-            if status != 0 {
-                errTrace("UdpSocket.write, invalid address")
-                return -1
-            }
-            
-            var mh = msghdr()
-            mh.msg_name = UnsafeMutableRawPointer(&ssaddr)
-            mh.msg_namelen = ssaddr.length()
-            mh.msg_control = nil
-            mh.msg_controllen = 0
-            mh.msg_flags = 0
-            mh.msg_iovlen = Int32(ivs.count)
-            
-            var ivs = ivs
-            var ret = -1
-            ret = ivs.withUnsafeMutableBufferPointer {
-                mh.msg_iov = $0.baseAddress
-                return Darwin.sendmsg(fd, &mh, Int32(0))
-            }
-            
-            if ret == 0 {
-                infoTrace("UdpSocket.write, peer closed")
-                ret = -1
-            } else if ret < 0 {
-                if wouldBlock(errno) {
-                    ret = 0
-                } else {
-                    errTrace("UdpSocket.write, failed, err=\(errno)")
-                }
-            }
-            if ret < dlen {
-                resumeOnWrite()
-                errTrace("UdpSocket.write, partial written ???")
-            }
-            return ret
+        if fd == kInvalidSocket {
+            return 0
         }
-        return 0
+        var dlen = 0
+        for i in 0..<iovs.count {
+            dlen += iovs[i].iov_len
+        }
+        
+        var ssaddr = sockaddr_storage()
+        var hints = addrinfo(
+            ai_flags: AI_ADDRCONFIG,
+            ai_family: AF_UNSPEC,
+            ai_socktype: SOCK_DGRAM,
+            ai_protocol: 0,
+            ai_addrlen: 0,
+            ai_canonname: nil,
+            ai_addr: nil,
+            ai_next: nil)
+        let status = getAddrInfo(addr, port, &hints, &ssaddr)
+        if status != 0 {
+            errTrace("UdpSocket.write, invalid address")
+            return -1
+        }
+        
+        var mh = msghdr()
+        mh.msg_name = UnsafeMutableRawPointer(&ssaddr)
+        mh.msg_namelen = ssaddr.length()
+        mh.msg_control = nil
+        mh.msg_controllen = 0
+        mh.msg_flags = 0
+        mh.msg_iovlen = Int32(iovs.count)
+        
+        var iovs = iovs
+        var ret = -1
+        ret = iovs.withUnsafeMutableBufferPointer {
+            mh.msg_iov = $0.baseAddress
+            return Darwin.sendmsg(fd, &mh, Int32(0))
+        }
+        
+        if ret == 0 {
+            infoTrace("UdpSocket.write, peer closed")
+            ret = -1
+        } else if ret < 0 {
+            if wouldBlock(errno) {
+                ret = 0
+            } else {
+                errTrace("UdpSocket.write, failed, err=\(errno)")
+            }
+        }
+        if ret < dlen {
+            resumeOnWrite()
+            errTrace("UdpSocket.write, partial written ???")
+        }
+        return ret
     }
 }

@@ -8,16 +8,19 @@
 
 import Foundation
 
+typealias SOCKET_FD = Int32
+let kInvalidSocket = Int32(-1)
+
 public class Socket
 {
-    internal var fd: Int32? = nil
+    internal var fd: SOCKET_FD = kInvalidSocket
     fileprivate var queue: DispatchQueue? = nil
     fileprivate var readSource: DispatchSourceRead? = nil
     fileprivate var writeSource: DispatchSourceWrite? = nil
     fileprivate var writeSuspended = true
     
-    init (dq: DispatchQueue?) {
-        self.queue = dq
+    init (queue: DispatchQueue?) {
+        self.queue = queue
     }
     
     deinit {
@@ -26,10 +29,10 @@ public class Socket
     }
     
     internal func cleanup() {
-        if let fd = self.fd {
+        if self.fd != kInvalidSocket {
             infoTrace("Socket.cleanup, close fd: \(fd)")
             let _ = Darwin.close(fd)
-            self.fd = nil
+            self.fd = kInvalidSocket
         }
         if let rsource = readSource {
             rsource.cancel()
@@ -45,7 +48,7 @@ public class Socket
         queue = nil
     }
     
-    internal func initWithFd(_ fd: Int32) -> Bool {
+    internal func initWithFd(_ fd: SOCKET_FD) -> Bool {
         self.fd = fd
         setNonblocking(fd)
         if !initQueue() {
@@ -71,36 +74,35 @@ public class Socket
     
     private func initDispatchSource(fd: Int32) -> Bool {
         readSource = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
-        if let rsource = readSource {
-            rsource.setEventHandler {
-                self.processRead(fd: fd, rsource: rsource)
-            }
-            rsource.setCancelHandler {
-                if self.fd != -1 {
-                    //Darwin.close(fd)
-                }
-            }
-            rsource.resume()
-        } else {
+        guard let rsource = readSource else {
             errTrace("failed to create read dispatch source")
             return false
         }
+        rsource.setEventHandler {
+            self.processRead(fd: fd, rsource: rsource)
+        }
+        rsource.setCancelHandler {
+            if self.fd != -1 {
+                //Darwin.close(fd)
+            }
+        }
+        rsource.resume()
+
         writeSource = DispatchSource.makeWriteSource(fileDescriptor: fd, queue: queue)
-        if let wsource = writeSource {
-            wsource.setEventHandler {
-                self.processWrite(fd: fd, wsource: wsource)
-            }
-            wsource.setCancelHandler {
-                if self.fd != -1 {
-                    //Darwin.close(fd)
-                }
-            }
-            wsource.resume()
-            writeSuspended = false
-        } else {
+        guard let wsource = writeSource else {
             errTrace("failed to create write dispatch source")
             return false
         }
+        wsource.setEventHandler {
+            self.processWrite(fd: fd, wsource: wsource)
+        }
+        wsource.setCancelHandler {
+            if self.fd != -1 {
+                //Darwin.close(fd)
+            }
+        }
+        wsource.resume()
+        writeSuspended = false
         return true
     }
     

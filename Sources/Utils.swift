@@ -8,7 +8,7 @@
 
 import Foundation
 
-func setNonblocking(_ fd: Int32) {
+func setNonblocking(_ fd: SOCKET_FD) {
     let flags = fcntl(fd, F_GETFL)
     guard fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_ASYNC) != -1 else {
         let errorNumber = errno
@@ -48,7 +48,7 @@ func getNameInfo(_ ssaddr: UnsafePointer<sockaddr_storage>) -> (addr: String, po
     return (String(cString: addr), Int(String(cString: port))!)
 }
 
-func getSockName(_ fd: Int32) -> (addr: String, port: Int) {
+func getSockName(_ fd: SOCKET_FD) -> (addr: String, port: Int) {
     var ssaddr = sockaddr_storage()
     var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
     let psa = ssaddr.asSockaddrPointer()
@@ -59,7 +59,7 @@ func getSockName(_ fd: Int32) -> (addr: String, port: Int) {
     return getNameInfo(&ssaddr)
 }
 
-func getPeerName(_ fd: Int32) -> (addr: String, port: Int) {
+func getPeerName(_ fd: SOCKET_FD) -> (addr: String, port: Int) {
     var ssaddr = sockaddr_storage()
     var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
     let psa = ssaddr.asSockaddrPointer()
@@ -87,7 +87,7 @@ extension sockaddr_storage {
     }
 }
 
-func bind(_ fd: Int32, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
+func bind(_ fd: SOCKET_FD, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
     let ssalen = ssaddr.pointee.length()
     let status = ssaddr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         return Darwin.bind(fd, $0, ssalen)
@@ -95,7 +95,7 @@ func bind(_ fd: Int32, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
     return status
 }
 
-func connect(_ fd: Int32, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
+func connect(_ fd: SOCKET_FD, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
     let ssalen = ssaddr.pointee.length()
     let status = ssaddr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         return Darwin.connect(fd, $0, ssalen)
@@ -103,7 +103,7 @@ func connect(_ fd: Int32, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int32 {
     return status
 }
 
-func accept(_ fd: Int32, _ ssaddr: UnsafeMutablePointer<sockaddr_storage>) -> Int32 {
+func accept(_ fd: SOCKET_FD, _ ssaddr: UnsafeMutablePointer<sockaddr_storage>) -> Int32 {
     var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
     let s = ssaddr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         return Darwin.accept(fd, $0, &ssalen)
@@ -111,7 +111,7 @@ func accept(_ fd: Int32, _ ssaddr: UnsafeMutablePointer<sockaddr_storage>) -> In
     return s
 }
 
-func recvfrom(_ fd: Int32, _ data: UnsafeMutableRawPointer, _ len: Int, _ ssaddr: UnsafeMutablePointer<sockaddr_storage>) -> Int {
+func recvfrom(_ fd: SOCKET_FD, _ data: UnsafeMutableRawPointer, _ len: Int, _ ssaddr: UnsafeMutablePointer<sockaddr_storage>) -> Int {
     var ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
     let ret = ssaddr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         return Darwin.recvfrom(fd, data, len, 0, $0, &ssalen)
@@ -119,7 +119,7 @@ func recvfrom(_ fd: Int32, _ data: UnsafeMutableRawPointer, _ len: Int, _ ssaddr
     return ret
 }
 
-func sendto(_ fd: Int32, _ data: UnsafeRawPointer, _ len: Int, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int {
+func sendto(_ fd: SOCKET_FD, _ data: UnsafeRawPointer, _ len: Int, _ ssaddr: UnsafePointer<sockaddr_storage>) -> Int {
     let ssalen = socklen_t(MemoryLayout<sockaddr_storage>.size)
     let ret = ssaddr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         return Darwin.sendto(fd, data, len, 0, $0, ssalen)
