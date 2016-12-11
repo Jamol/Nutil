@@ -157,16 +157,9 @@ extension UdpSocket {
         if state != .open {
             return 0
         }
-        var ret = 0
-        ret = self.write(UnsafePointer<UInt8>(str), str.characters.count, addr, port)
-        /*str.withCString { (cstr: UnsafePointer<Int8>) -> Void in
-         let len = Int(strlen(cstr))
-         if len > 0 {
-         cstr.withMemoryRebound(to: UnsafePointer<UInt8>.self, capacity: len) {
-         ret = self.write($0, len)
-         }
-         }
-         }*/
+        let ret = str.withCString {
+            return self.write($0, str.utf8.count, addr, port)
+        }
         return ret
     }
     

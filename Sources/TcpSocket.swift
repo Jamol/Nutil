@@ -10,7 +10,7 @@ import Foundation
 import Darwin
 
 public protocol TcpDelegate {
-    func onConnect(_ err: KMError)
+    func onConnect(err: KMError)
     func onRead()
     func onWrite()
     func onClose()
@@ -69,22 +69,22 @@ public class TcpSocket : Socket
         let err = errno
         if status != 0 && err != EISCONN {
             infoTrace("checkConnecting failed: errno=\(err), " + String(validatingUTF8: strerror(err))!)
-            onConnect(.sockError)
+            onConnect(err: .sockError)
         } else {
             let info = getSockName(fd)
             infoTrace("checkConnecting, myaddr=\(info.addr), myport=\(info.port)")
-            onConnect(.noError)
+            onConnect(err: .noError)
         }
     }
     
-    fileprivate func onConnect(_ err: KMError) {
+    fileprivate func onConnect(err: KMError) {
         if err == .noError {
             state = .open
-            delegate?.onConnect(.noError)
+            delegate?.onConnect(err: .noError)
         } else {
             cleanup()
             state = .closed
-            delegate?.onConnect(err)
+            delegate?.onConnect(err: err)
         }
     }
     
@@ -216,20 +216,6 @@ extension TcpSocket {
         }
         return ret
     }
-    
-    public func read<T>(_ data: [T]) -> Int {
-        var data = data
-        if state != .open {
-            return 0
-        }
-        let dlen = data.count * MemoryLayout<T>.size
-        var ret = 0
-        ret = data.withUnsafeMutableBufferPointer {
-            let ptr = $0.baseAddress
-            return self.read(ptr!, dlen)
-        }
-        return ret
-    }
 }
 
 // write methods
@@ -238,16 +224,9 @@ extension TcpSocket {
         if state != .open {
             return 0
         }
-        var ret = 0
-        ret = self.write(UnsafePointer<UInt8>(str), str.characters.count)
-        /*str.withCString { (cstr: UnsafePointer<Int8>) -> Void in
-         let len = Int(strlen(cstr))
-         if len > 0 {
-         cstr.withMemoryRebound(to: UnsafePointer<UInt8>.self, capacity: len) {
-         ret = self.write($0, len)
-         }
-         }
-         }*/
+        let ret = str.withCString {
+            return self.write($0, str.utf8.count)
+        }
         return ret
     }
     

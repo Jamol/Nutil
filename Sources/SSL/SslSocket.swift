@@ -70,7 +70,7 @@ extension SslSocket {
 // write methods
 extension SslSocket {
     public func write(_ str: String) -> Int {
-        return self.write(UnsafePointer<Int8>(str), str.characters.count)
+        return self.write(UnsafePointer<Int8>(str), str.utf8.count)
     }
     
     public func write<T>(_ data: [T]) -> Int {
@@ -96,7 +96,7 @@ extension SslSocket {
 }
 
 extension SslSocket: TcpDelegate {
-    public func onConnect(_ err: KMError) {
+    public func onConnect(err: KMError) {
         if err == .noError {
             let err = startSslHandshake(role: .client)
             if err == .noError && sslHandler.getState() == .handshake {
@@ -105,7 +105,7 @@ extension SslSocket: TcpDelegate {
         } else {
             cleanup()
         }
-        delegate?.onConnect(err)
+        delegate?.onConnect(err: err)
     }
     public func onRead() {
         if sslHandler.getState() == .handshake {
@@ -130,12 +130,12 @@ extension SslSocket: TcpDelegate {
         if sslHandler.getState() == .handshake {
             let ssl_state = sslHandler.doSslHandshake()
             if ssl_state == .error {
-                delegate?.onConnect(.sslError)
+                delegate?.onConnect(err: .sslError)
                 return false
             } else if ssl_state == .handshake {
                 return false
             } else {
-                delegate?.onConnect(.noError)
+                delegate?.onConnect(err: .noError)
             }
         }
         return true

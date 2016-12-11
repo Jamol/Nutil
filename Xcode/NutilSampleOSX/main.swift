@@ -12,7 +12,7 @@ import Nutil
 
 #if false
 class TcpSocketDelegate : TcpDelegate {
-    public func onConnect(_ err: KMError) {
+    public func onConnect(err: KMError) {
         print("Tcp.onConnect, err=\(err)\n")
     }
     public func onRead() {
@@ -64,9 +64,9 @@ udp.delegate = udpd
 _ = udp.bind("127.0.0.1", 52328)
 #endif
 
-#if true
+#if false
     class SslSocketDelegate : SslDelegate {
-        public func onConnect(_ err: KMError) {
+        public func onConnect(err: KMError) {
             print("Ssl.onConnect, err=\(err)\n")
         }
         public func onRead() {
@@ -83,6 +83,11 @@ let ssld = SslSocketDelegate()
 var ssl = SslSocket()
 ssl.delegate = ssld
 let ret = ssl.connect("www.google.com", 443)
+#endif
+
+#if true
+    let req = Http1xRequest()
+    _ = req.sendRequest(method: "get", url: "http://www.163.com", ver: "HTTP/1.1")
 #endif
 
 RunLoop.main.run()

@@ -1,5 +1,5 @@
 //
-//  UnixBridge.c
+//  UnixBridge.cpp
 //  RemoteKit
 //
 //  Created by Jamol Bao on 8/12/15.
