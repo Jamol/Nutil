@@ -40,6 +40,9 @@ class HttpParser {
         case trailer
     }
     
+    var bodyBytesRead: Int {
+        return totalBytesRead
+    }
     fileprivate var contentLength:Int?
     fileprivate var totalBytesRead = 0
     fileprivate var readState = ReadState.line
@@ -111,7 +114,8 @@ class HttpParser {
             warnTrace("HttpParser::parse, invalid state: \(readState)")
             return 0
         }
-        if readState == .body && !isChunked && contentLength != nil {
+        if readState == .body && !isChunked && contentLength == nil {
+            // read untill EOF, return directly
             totalBytesRead += len
             delegate?.onData(data: data, len: len)
             return len
@@ -200,6 +204,7 @@ class HttpParser {
                 onComplete()
             } else { // need more data or read untill EOF
                 if remain > 0 {
+                    totalBytesRead += remain
                     delegate?.onData(data: ptr, len: remain)
                 }
                 return len
@@ -394,11 +399,11 @@ class HttpParser {
     fileprivate func onHeaderComplete() {
         if let str = headers["content-length"] {
             contentLength = Int(str)
-            infoTrace("onHeaderComplete, contentLength=\(contentLength)")
+            //infoTrace("onHeaderComplete, contentLength=\(contentLength)")
         }
         if let str = headers["transfer-encoding"] {
             isChunked = str == "chunked"
-            infoTrace("onHeaderComplete, isChunked=\(isChunked)")
+            //infoTrace("onHeaderComplete, isChunked=\(isChunked)")
         }
         if headers["upgrade"] != nil {
             isUpgrade = true

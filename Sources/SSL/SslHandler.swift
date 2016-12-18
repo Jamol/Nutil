@@ -158,13 +158,8 @@ class SslHandler {
                 break
             case SSL_ERROR_WANT_READ, SSL_ERROR_WANT_WRITE:
                 ret = 0
-            case SSL_ERROR_SYSCALL:
-                if(errno == EAGAIN || errno == EINTR) {
-                    ret = 0
-                } else {
-                    printSslError("send", ret, ssl_err)
-                    ret = -1
-                }
+            case SSL_ERROR_SYSCALL where errno == EAGAIN || errno == EINTR:
+                ret = 0
             default:
                 printSslError("send", ret, ssl_err)
                 ret = -1
@@ -215,13 +210,8 @@ class SslHandler {
         case SSL_ERROR_ZERO_RETURN:
             ret = -1
             infoTrace("receive, SSL_ERROR_ZERO_RETURN")
-        case SSL_ERROR_SYSCALL:
-            if(errno == EAGAIN || errno == EINTR) {
-                ret = 0
-            } else {
-                printSslError("receive", ret, ssl_err)
-                ret = -1
-            }
+        case SSL_ERROR_SYSCALL where errno == EAGAIN || errno == EINTR:
+            ret = 0
         default:
             printSslError("receive", ret, ssl_err)
             ret = -1

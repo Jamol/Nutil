@@ -87,7 +87,20 @@ let ret = ssl.connect("www.google.com", 443)
 
 #if true
     let req = Http1xRequest()
-    _ = req.sendRequest(method: "get", url: "http://www.163.com", ver: "HTTP/1.1")
+    req
+        .onData { (data: UnsafeMutableRawPointer, len: Int) in
+            //print("data received, len=\(len)")
+        }
+        .onHeaderComplete {
+            print("header completed")
+        }
+        .onComplete {
+            print("request completed")
+        }
+        .onError {
+            print("request error")
+        }
+    _ = req.sendRequest(method: "get", url: "http://0.0.0.0:8443/testdata", ver: "HTTP/1.1")
 #endif
 
 RunLoop.main.run()

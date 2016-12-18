@@ -9,6 +9,10 @@
 import Foundation
 
 public class Http1xRequest : TcpConnection, HttpParserDelegate {
+    
+    public typealias DataCallback = (UnsafeMutableRawPointer, Int) -> Void
+    public typealias EventCallback = () -> Void
+    
     fileprivate let parser = HttpParser()
     fileprivate var headers: [String: String] = [:]
     fileprivate var contentLength: Int?
@@ -30,6 +34,11 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
     }
     
     fileprivate var state = State.idle
+    
+    fileprivate var cbData: DataCallback?
+    fileprivate var cbHeader: EventCallback?
+    fileprivate var cbComplete: EventCallback?
+    fileprivate var cbError: EventCallback?
     
     public override init() {
         super.init()
@@ -172,16 +181,19 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
     }
     
     func onData(data: UnsafeMutableRawPointer, len: Int) {
-        infoTrace("onData, len=\(len)")
+        //infoTrace("onData, len=\(len), total=\(parser.bodyBytesRead)")
+        cbData?(data, len)
     }
     
     func onHeaderComplete() {
         infoTrace("onHeaderComplete")
+        cbHeader?()
     }
     
     func onComplete() {
-        infoTrace("onComplete")
+        infoTrace("onComplete, bodyReceived=\(parser.bodyBytesRead)")
         setState(.completed)
+        cbComplete?()
     }
     
     func onError() {
@@ -191,14 +203,32 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
         }
         if state < State.completed {
             setState(.error)
+            cbError?()
         } else {
             setState(.closed)
         }
     }
 }
 
-// func < for enums
-func <<T: RawRepresentable>(a: T, b: T) -> Bool where T.RawValue: Comparable {
-    return a.rawValue < b.rawValue
+extension Http1xRequest {
+    @discardableResult public func onData(cb: @escaping DataCallback) -> Self {
+        cbData = cb
+        return self
+    }
+    
+    @discardableResult public func onHeaderComplete(cb: @escaping EventCallback) -> Self {
+        cbHeader = cb
+        return self
+    }
+    
+    @discardableResult public func onComplete(cb: @escaping EventCallback) -> Self {
+        cbComplete = cb
+        return self
+    }
+    
+    @discardableResult public func onError(cb: @escaping EventCallback) -> Self {
+        cbError = cb
+        return self
+    }
 }
 

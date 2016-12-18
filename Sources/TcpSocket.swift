@@ -224,9 +224,10 @@ extension TcpSocket {
         if state != .open {
             return 0
         }
-        let ret = str.withCString {
+        /*let ret = str.withCString {
             return self.write($0, str.utf8.count)
-        }
+        }*/
+        let ret = self.write(UnsafePointer<UInt8>(str), str.utf8.count)
         return ret
     }
     

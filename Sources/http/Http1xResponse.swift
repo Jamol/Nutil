@@ -8,6 +8,28 @@
 
 import Foundation
 
-public class Http1xResponse {
+public class Http1xResponse : TcpConnection {
     
+    fileprivate let parser = HttpParser()
+    
+    override func handleInputData(_ data: UnsafeMutablePointer<UInt8>, _ len: Int) -> Bool {
+        let ret = parser.parse(data: data, len: len)
+        if ret != len {
+            warnTrace("handleInputData, ret=\(ret), len=\(len)")
+        }
+        return true
+    }
+    
+    override func handleOnSend() {
+        
+    }
+    
+    override func handleOnError(err: KMError) {
+        infoTrace("handleOnError, err=\(err)")
+        onError()
+    }
+    
+    func onError() {
+        
+    }
 }

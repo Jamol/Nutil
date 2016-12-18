@@ -181,7 +181,6 @@ func verifyCallback(_ ok: Int32, _ ctx: UnsafeMutablePointer<X509_STORE_CTX>?) -
         case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
             infoTrace("verifyCallback, ... ignored, err=\(ctx.pointee.error)")
             ok = 1
-            break
         default:
             break
         }
@@ -191,29 +190,31 @@ func verifyCallback(_ ok: Int32, _ ctx: UnsafeMutablePointer<X509_STORE_CTX>?) -
 
 func alpnCallback(ssl: UnsafeMutablePointer<SSL>?, out: UnsafeMutablePointer<UnsafePointer<UInt8>?>?, outlen: UnsafeMutablePointer<UInt8>?, _in: UnsafePointer<UInt8>?, inlen: UInt32, arg: UnsafeMutableRawPointer?) -> Int32
 {
-    if let arg = arg {
-        let alpn = arg.assumingMemoryBound(to: [UInt8].self)
-        out?.withMemoryRebound(to: (UnsafeMutablePointer<UInt8>?.self)!, capacity: 1) {
-            if (SSL_select_next_proto($0, outlen, alpn.pointee, UInt32(alpn.pointee.count), _in, inlen) != OPENSSL_NPN_NEGOTIATED) {
-            }
-        }
-        /*if (SSL_select_next_proto(out, outlen, alpn.pointee, UInt32(alpn.pointee.count), _in, inlen) != OPENSSL_NPN_NEGOTIATED) {
-            return SSL_TLSEXT_ERR_NOACK;
-        }*/
+    guard let arg = arg else {
+        return SSL_TLSEXT_ERR_OK
     }
+    let alpn = arg.assumingMemoryBound(to: [UInt8].self)
+    out?.withMemoryRebound(to: (UnsafeMutablePointer<UInt8>?.self)!, capacity: 1) {
+        if (SSL_select_next_proto($0, outlen, alpn.pointee, UInt32(alpn.pointee.count), _in, inlen) != OPENSSL_NPN_NEGOTIATED) {
+        }
+    }
+    /*if (SSL_select_next_proto(out, outlen, alpn.pointee, UInt32(alpn.pointee.count), _in, inlen) != OPENSSL_NPN_NEGOTIATED) {
+     return SSL_TLSEXT_ERR_NOACK;
+     }*/
     return SSL_TLSEXT_ERR_OK
 }
 
 func serverNameCallback(ssl: UnsafeMutablePointer<SSL>?, ad: UnsafeMutablePointer<Int32>?, arg: UnsafeMutableRawPointer?) -> Int32
 {
-    if let ssl = ssl {
-        let serverName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
-        if let sn = serverName {
-            let ssl_ctx_old = arg?.assumingMemoryBound(to: SSL_CTX.self)
-            let ssl_ctx_new = getSslContext(sn)
-            if ssl_ctx_new != ssl_ctx_old {
-                SSL_set_SSL_CTX(ssl, ssl_ctx_new)
-            }
+    guard let ssl = ssl else {
+        return SSL_TLSEXT_ERR_NOACK
+    }
+    let serverName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
+    if let sn = serverName {
+        let ssl_ctx_old = arg?.assumingMemoryBound(to: SSL_CTX.self)
+        let ssl_ctx_new = getSslContext(sn)
+        if ssl_ctx_new != ssl_ctx_old {
+            SSL_set_SSL_CTX(ssl, ssl_ctx_new)
         }
     }
     return SSL_TLSEXT_ERR_NOACK

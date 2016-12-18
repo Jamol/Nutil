@@ -126,3 +126,8 @@ func sendto(_ fd: SOCKET_FD, _ data: UnsafeRawPointer, _ len: Int, _ ssaddr: Uns
     }
     return ret
 }
+
+// func < for enums
+func <<T: RawRepresentable>(a: T, b: T) -> Bool where T.RawValue: Comparable {
+    return a.rawValue < b.rawValue
+}
