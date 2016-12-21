@@ -9,16 +9,8 @@
 import Foundation
 import Darwin
 
-public protocol TcpDelegate {
-    func onConnect(err: KMError)
-    func onRead()
-    func onWrite()
-    func onClose()
-}
-
 public class TcpSocket : Socket
 {
-    public var delegate: TcpDelegate? = nil
     fileprivate var ssaddr = sockaddr_storage()
     
     enum SocketState {
@@ -30,6 +22,11 @@ public class TcpSocket : Socket
     
     var state: SocketState = .idle
     public var isOpen: Bool { return state == .open }
+    
+    fileprivate var cbConnect: ((KMError) -> Void)?
+    fileprivate var cbRead: (() -> Void)?
+    fileprivate var cbWrite: (() -> Void)?
+    fileprivate var cbClose: (() -> Void)?
     
     public init () {
         super.init(queue: nil)
@@ -80,28 +77,28 @@ public class TcpSocket : Socket
     fileprivate func onConnect(err: KMError) {
         if err == .noError {
             state = .open
-            delegate?.onConnect(err: .noError)
+            cbConnect?(.noError)
         } else {
             cleanup()
             state = .closed
-            delegate?.onConnect(err: err)
+            cbConnect?(err)
         }
     }
     
     fileprivate func onRead() {
-        delegate?.onRead()
+        cbRead?()
     }
     
     fileprivate func onWrite() {
         suspendOnWrite()
-        delegate?.onWrite()
+        cbWrite?()
     }
     
     fileprivate func onClose() {
         infoTrace("TcpSocket.onClose")
         cleanup()
         state = .closed
-        delegate?.onClose()
+        cbClose?()
     }
 }
 
@@ -187,7 +184,7 @@ extension TcpSocket {
 
 // server socket methods
 extension TcpSocket {
-    public func attachFd(_ fd: Int32) -> Int {
+    public func attachFd(_ fd: SOCKET_FD) -> Int {
         if !initWithFd(fd) {
             return -1
         }
@@ -286,5 +283,27 @@ extension TcpSocket {
             resumeOnWrite()
         }
         return ret
+    }
+}
+
+extension TcpSocket {
+    @discardableResult public func onConnect(cb: @escaping (KMError) -> Void) -> Self {
+        cbConnect = cb
+        return self
+    }
+    
+    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+        cbRead = cb
+        return self
+    }
+    
+    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+        cbWrite = cb
+        return self
+    }
+    
+    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+        cbClose = cb
+        return self
     }
 }

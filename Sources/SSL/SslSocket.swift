@@ -8,23 +8,33 @@
 
 import Foundation
 
-public typealias SslDelegate = TcpDelegate
-
 public class SslSocket {
     fileprivate let sslHandler = SslHandler()
     fileprivate var tcpSocket: TcpSocket!
     fileprivate var alpnProtos: AlpnProtos? = nil
     fileprivate var serverName = ""
-    public var delegate: SslDelegate?
+    
+    fileprivate var cbConnect: ((KMError) -> Void)?
+    fileprivate var cbRead: (() -> Void)?
+    fileprivate var cbWrite: (() -> Void)?
+    fileprivate var cbClose: (() -> Void)?
     
     public init() {
         tcpSocket = TcpSocket()
-        tcpSocket.delegate = self
+        tcpSocket
+            .onConnect(cb: onConnect)
+            .onRead(cb: onRead)
+            .onWrite(cb: onWrite)
+            .onClose(cb: onClose)
     }
     
     public init (queue: DispatchQueue?) {
         tcpSocket = TcpSocket(queue: queue)
-        tcpSocket.delegate = self
+        tcpSocket
+            .onConnect(cb: onConnect)
+            .onRead(cb: onRead)
+            .onWrite(cb: onWrite)
+            .onClose(cb: onClose)
     }
     
     public func bind(_ addr: String, _ port: Int) -> Int {
@@ -95,8 +105,8 @@ extension SslSocket {
     }
 }
 
-extension SslSocket: TcpDelegate {
-    public func onConnect(err: KMError) {
+extension SslSocket {
+    func onConnect(err: KMError) {
         if err == .noError {
             let err = startSslHandshake(role: .client)
             if err == .noError && sslHandler.getState() == .handshake {
@@ -105,37 +115,37 @@ extension SslSocket: TcpDelegate {
         } else {
             cleanup()
         }
-        delegate?.onConnect(err: err)
+        cbConnect?(err)
     }
-    public func onRead() {
+    func onRead() {
         if sslHandler.getState() == .handshake {
             _ = checkSslState()
         } else {
-            delegate?.onRead()
+            cbRead?()
         }
     }
-    public func onWrite() {
+    func onWrite() {
         if sslHandler.getState() == .handshake {
             _ = checkSslState()
         } else {
-            delegate?.onWrite()
+            cbWrite?()
         }
     }
-    public func onClose() {
+    func onClose() {
         cleanup()
-        delegate?.onClose()
+        cbClose?()
     }
     
     func checkSslState() -> Bool {
         if sslHandler.getState() == .handshake {
             let ssl_state = sslHandler.doSslHandshake()
             if ssl_state == .error {
-                delegate?.onConnect(err: .sslError)
+                cbConnect?(.sslError)
                 return false
             } else if ssl_state == .handshake {
                 return false
             } else {
-                delegate?.onConnect(err: .noError)
+                cbConnect?(.noError)
             }
         }
         return true
@@ -161,5 +171,27 @@ extension SslSocket {
             return .sslError
         }
         return .noError
+    }
+}
+
+extension SslSocket {
+    @discardableResult public func onConnect(cb: @escaping (KMError) -> Void) -> Self {
+        cbConnect = cb
+        return self
+    }
+    
+    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+        cbRead = cb
+        return self
+    }
+    
+    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+        cbWrite = cb
+        return self
+    }
+    
+    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+        cbClose = cb
+        return self
     }
 }

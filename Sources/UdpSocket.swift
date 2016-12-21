@@ -9,23 +9,18 @@
 import Foundation
 import Darwin
 
-public protocol UdpDelegate {
-    func onRead()
-    func onWrite()
-    func onClose()
-}
-
 public class UdpSocket : Socket
 {
-    public var delegate: UdpDelegate? = nil
-    
     enum SocketState {
         case idle
         case open
         case closed
     }
-    
     fileprivate var state: SocketState = .idle
+    
+    fileprivate var cbRead: (() -> Void)?
+    fileprivate var cbWrite: (() -> Void)?
+    fileprivate var cbClose: (() -> Void)?
     
     public init () {
         super.init(queue: nil)
@@ -93,19 +88,19 @@ public class UdpSocket : Socket
     }
     
     fileprivate func onRead() {
-        delegate?.onRead()
+        cbRead?()
     }
     
     fileprivate func onWrite() {
         suspendOnWrite()
-        delegate?.onWrite()
+        cbWrite?()
     }
     
     fileprivate func onClose() {
         infoTrace("UdpSocket.onClose")
         cleanup()
         state = .closed
-        delegate?.onClose()
+        cbClose?()
     }
 }
 
@@ -270,5 +265,22 @@ extension UdpSocket {
             errTrace("UdpSocket.write, partial written ???")
         }
         return ret
+    }
+}
+
+extension UdpSocket {
+    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+        cbRead = cb
+        return self
+    }
+    
+    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+        cbWrite = cb
+        return self
+    }
+    
+    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+        cbClose = cb
+        return self
     }
 }

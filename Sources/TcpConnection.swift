@@ -8,21 +8,25 @@
 
 import Foundation
 
-public class TcpConnection
+class TcpConnection
 {
     fileprivate let kRecvBufferSize = 64*1024
-    fileprivate let socket = TcpSocket()
+    let socket = TcpSocket()
     fileprivate var buffer = [UInt8]()
     
     init () {
-        socket.delegate = self
+        socket
+            .onConnect(cb: onConnect)
+            .onRead(cb: onRead)
+            .onWrite(cb: onWrite)
+            .onClose(cb: onClose)
     }
     
     func connect(_ addr: String, _ port: Int) -> Int {
         return socket.connect(addr, port)
     }
     
-    func attachFd(_ fd: Int32) -> Int {
+    func attachFd(_ fd: SOCKET_FD) -> Int {
         return socket.attachFd(fd)
     }
     
@@ -91,6 +95,35 @@ public class TcpConnection
         return ret
     }
     
+    func send(_ iovs: [iovec]) -> Int {
+        if !sendBufferEmpty() {
+            if !sendBufferedData() {
+                return -1
+            }
+            if !sendBufferEmpty() {
+                return 0
+            }
+        }
+        var ret = socket.writev(iovs)
+        if ret >= 0 {
+            var wlen = 0
+            for iov in iovs {
+                wlen += iov.iov_len
+                let pfirst = iov.iov_base + ret
+                let plast = iov.iov_base + iov.iov_len
+                if pfirst < plast {
+                    let ptr = pfirst.assumingMemoryBound(to: UInt8.self)
+                    buffer += Array(UnsafeBufferPointer(start: ptr, count: plast - pfirst))
+                    ret = 0
+                } else {
+                    ret -= iov.iov_len
+                }
+            }
+            return wlen
+        }
+        return ret
+    }
+    
     func close() {
         socket.close()
     }
@@ -115,7 +148,7 @@ public class TcpConnection
         socket.close()
     }
     
-    fileprivate func sendBufferEmpty() -> Bool {
+    func sendBufferEmpty() -> Bool {
         return buffer.count == 0
     }
     
@@ -135,13 +168,13 @@ public class TcpConnection
     }
 }
 
-extension TcpConnection : TcpDelegate
+extension TcpConnection
 {
-    public func onConnect(err: KMError) {
+    fileprivate func onConnect(err: KMError) {
         handleOnConnect(err: err)
     }
     
-    public func onRead() {
+    fileprivate func onRead() {
         var buf = Array<UInt8>(repeating: 0, count: kRecvBufferSize)
         buf.withUnsafeMutableBufferPointer() {
             guard let ptr = $0.baseAddress else {
@@ -163,7 +196,7 @@ extension TcpConnection : TcpDelegate
         }
     }
     
-    public func onWrite() {
+    fileprivate func onWrite() {
         if !sendBufferedData() {
             return
         }
@@ -172,7 +205,7 @@ extension TcpConnection : TcpDelegate
         }
     }
     
-    public func onClose() {
+    fileprivate func onClose() {
         cleanup()
         handleOnError(err: .sockError)
     }

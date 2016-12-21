@@ -11,3 +11,6 @@ import Foundation
 let kDefauleUserAgent = "kuma 1.0"
 let kContentLength = "Content-Length"
 let kTransferEncoding = "Transfer-Encoding"
+
+typealias DataCallback = (UnsafeMutableRawPointer, Int) -> Void
+typealias EventCallback = () -> Void

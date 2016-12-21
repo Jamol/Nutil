@@ -8,19 +8,12 @@
 
 import Foundation
 
-public class Http1xRequest : TcpConnection, HttpParserDelegate {
-    
-    public typealias DataCallback = (UnsafeMutableRawPointer, Int) -> Void
-    public typealias EventCallback = () -> Void
-    
+class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSender {
+
     fileprivate let parser = HttpParser()
-    fileprivate var headers: [String: String] = [:]
-    fileprivate var contentLength: Int?
-    fileprivate var isChunked = false
     fileprivate var url: URL!
     fileprivate var method = ""
     fileprivate var version = "HTTP/1.1"
-    fileprivate var bodyBytesSent = 0
     
     enum State: Int, Comparable {
         case idle
@@ -39,10 +32,19 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
     fileprivate var cbHeader: EventCallback?
     fileprivate var cbComplete: EventCallback?
     fileprivate var cbError: EventCallback?
+    fileprivate var cbSend: EventCallback?
     
-    public override init() {
+    fileprivate var message = HttpMessage()
+    
+    override init() {
         super.init()
         parser.delegate = self
+        message.sender = self
+    }
+    
+    convenience init(version: String) {
+        self.init()
+        self.version = version
     }
     
     fileprivate func setState(_ state: State) {
@@ -53,22 +55,15 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
         super.close()
     }
     
-    public func addHeader(name: String, value: String) {
-        if !name.isEmpty {
-            if name.caseInsensitiveCompare(kContentLength) == .orderedSame {
-                contentLength = Int(value)
-            } else if name.caseInsensitiveCompare(kTransferEncoding) == .orderedSame {
-                isChunked = value.caseInsensitiveCompare("chunked") == .orderedSame
-            }
-            headers[name] = value
-        }
+    func addHeader(name: String, value: String) {
+        message.addHeader(name: name, value: value)
     }
     
-    public func addHeader(name: String, value: Int) {
-        addHeader(name: name, value: String(value))
+    func addHeader(name: String, value: Int) {
+        message.addHeader(name: name, value: value)
     }
     
-    public func sendRequest(method: String, url: String, ver: String) -> KMError {
+    func sendRequest(method: String, url: String) -> KMError {
         self.url = URL(string: url)
         self.method = method
         
@@ -95,67 +90,84 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
         return .noError
     }
     
-    override public func close() {
+    func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int {
+        if !sendBufferEmpty() || state != .sendingBody {
+            return 0
+        }
+        let ret = message.sendData(data, len)
+        if ret >= 0 {
+            if message.isCompleted && sendBufferEmpty() {
+                setState(.receivingResponse)
+            }
+        } else if ret < 0 {
+            setState(.error)
+        }
+        return ret
+    }
+    
+    func sendString(_ str: String) -> Int {
+        return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
+    }
+    
+    override func close() {
         cleanup()
     }
     
-    fileprivate func checkHeaders() {
-        if headers["Accept"] == nil {
-            headers["Accept"] = "*/*"
-        }
-        if headers["Content-Type"] == nil {
-            headers["Content-Type"] = "application/octet-stream"
-        }
-        if headers["User-Agent"] == nil {
-            headers["User-Agent"] = kDefauleUserAgent
-        }
-        if headers["Cache-Control"] == nil {
-            headers["Cache-Control"] = "no-cache"
-        }
-        if headers["Pragma"] == nil {
-            headers["Pragma"] = "no-cache"
-        }
-        if headers["Host"] == nil {
-            headers["Host"] = url.host
-        }
+    func getStatusCode() -> Int {
+        return parser.statusCode
     }
     
-    private func buildRequest() -> String {
-        var req = method
-        if !url.path.isEmpty {
-            req += " " + url.path
-        } else {
-            req += " /"
+    func getHeader(name: String) -> String? {
+        return parser.headers[name]
+    }
+    
+    fileprivate func checkHeaders() {
+        if !message.hasHeader(name: "Accept") {
+            addHeader(name: "Accept", value: "*/*")
         }
-        if let query = url.query {
-            req += "?" + query
+        if !message.hasHeader(name: "Content-Type") {
+            addHeader(name: "Content-Type", value: "application/octet-stream")
         }
-        req += " " + version
-        req += "\r\n"
-        for kv in headers {
-            req += kv.key + ": " + kv.value + "\r\n"
+        if !message.hasHeader(name: "User-Agent") {
+            addHeader(name: "User-Agent", value: kDefauleUserAgent)
         }
-        req += "\r\n"
-        return req
+        if !message.hasHeader(name: "Cache-Control") {
+            addHeader(name: "Cache-Control", value: "no-cache")
+        }
+        if !message.hasHeader(name: "Pragma") {
+            addHeader(name: "Pragma", value: "no-cache")
+        }
+        if !message.hasHeader(name: "Host") {
+            addHeader(name: "Host", value: url.host!)
+        }
     }
     
     private func sendRequest() {
-        bodyBytesSent = 0
-        let req = buildRequest()
+        var u = "/"
+        if !url.path.isEmpty {
+            u = url.path
+        }
+        if let query = url.query {
+            u += "?" + query
+        }
+        let req = message.buildMessageHeader(method: method, url: u, ver: version)
         setState(.sendingHeader)
         let ret = send(req)
         if ret < 0 {
-            errTrace("sendRequest, failed to send request")
+            errTrace("Http1xRequest.sendRequest, failed to send request")
             setState(.error)
-        } else if isChunked || (contentLength != nil && contentLength! > 0){
-            setState(.sendingBody)
-        } else {
-            setState(.receivingResponse)
+        } else if sendBufferEmpty() {
+            if message.hasBody {
+                setState(.sendingBody)
+                cbSend?()
+            } else {
+                setState(.receivingResponse)
+            }
         }
     }
     
     override func handleOnConnect(err: KMError) {
-        infoTrace("handleOnConnect, err=\(err)")
+        infoTrace("Http1xRequest.handleOnConnect, err=\(err)")
         if err == .noError {
             sendRequest()
         } else {
@@ -166,17 +178,30 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
     override func handleInputData(_ data: UnsafeMutablePointer<UInt8>, _ len: Int) -> Bool {
         let ret = parser.parse(data: data, len: len)
         if ret != len {
-            warnTrace("handleInputData, ret=\(ret), len=\(len)")
+            warnTrace("Http1xRequest.handleInputData, ret=\(ret), len=\(len)")
         }
         return true
     }
     
     override func handleOnSend() {
-        
+        if state == .sendingHeader {
+            if message.hasBody {
+                setState(.sendingBody)
+            } else {
+                setState(.receivingResponse)
+                return
+            }
+        } else if state == .sendingBody {
+            if message.isCompleted {
+                setState(.receivingResponse)
+                return
+            }
+        }
+        cbSend?()
     }
     
     override func handleOnError(err: KMError) {
-        infoTrace("handleOnError, err=\(err)")
+        infoTrace("Http1xRequest.handleOnError, err=\(err)")
         onError()
     }
     
@@ -186,18 +211,18 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
     }
     
     func onHeaderComplete() {
-        infoTrace("onHeaderComplete")
+        infoTrace("Http1xRequest.onHeaderComplete")
         cbHeader?()
     }
     
     func onComplete() {
-        infoTrace("onComplete, bodyReceived=\(parser.bodyBytesRead)")
+        infoTrace("Http1xRequest.onResponseComplete, bodyReceived=\(parser.bodyBytesRead)")
         setState(.completed)
         cbComplete?()
     }
     
     func onError() {
-        infoTrace("onError")
+        infoTrace("Http1xRequest.onError")
         if state == .receivingResponse && parser.setEOF(){
             return
         }
@@ -211,24 +236,28 @@ public class Http1xRequest : TcpConnection, HttpParserDelegate {
 }
 
 extension Http1xRequest {
-    @discardableResult public func onData(cb: @escaping DataCallback) -> Self {
+    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
         cbData = cb
         return self
     }
     
-    @discardableResult public func onHeaderComplete(cb: @escaping EventCallback) -> Self {
+    @discardableResult func onHeaderComplete(cb: @escaping () -> Void) -> Self {
         cbHeader = cb
         return self
     }
     
-    @discardableResult public func onComplete(cb: @escaping EventCallback) -> Self {
+    @discardableResult func onRequestComplete(cb: @escaping () -> Void) -> Self {
         cbComplete = cb
         return self
     }
     
-    @discardableResult public func onError(cb: @escaping EventCallback) -> Self {
+    @discardableResult func onError(cb: @escaping () -> Void) -> Self {
         cbError = cb
         return self
     }
+    
+    @discardableResult func onSend(cb: @escaping () -> Void) -> Self {
+        cbSend = cb
+        return self
+    }
 }
-

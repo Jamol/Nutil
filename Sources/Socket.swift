@@ -8,7 +8,7 @@
 
 import Foundation
 
-typealias SOCKET_FD = Int32
+public typealias SOCKET_FD = Int32
 let kInvalidSocket = Int32(-1)
 
 public class Socket

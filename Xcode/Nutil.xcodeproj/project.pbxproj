@@ -33,6 +33,9 @@
 		6F9925F91DD75A0D0093D4F3 /* Http1xRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */; };
 		6F9925FC1DD75A600093D4F3 /* HttpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FA1DD75A600093D4F3 /* HttpParser.swift */; };
 		6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */; };
+		6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */; };
+		6FBEF0891E0922110071EE5A /* HttpFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF0881E0922110071EE5A /* HttpFactory.swift */; };
+		6FBEF08D1E0930090071EE5A /* HttpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF08C1E0930090071EE5A /* HttpServer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +108,9 @@
 		6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http1xRequest.swift; sourceTree = "<group>"; };
 		6F9925FA1DD75A600093D4F3 /* HttpParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpParser.swift; sourceTree = "<group>"; };
 		6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http1xResponse.swift; sourceTree = "<group>"; };
+		6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpMessage.swift; sourceTree = "<group>"; };
+		6FBEF0881E0922110071EE5A /* HttpFactory.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpFactory.swift; sourceTree = "<group>"; };
+		6FBEF08C1E0930090071EE5A /* HttpServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -235,6 +241,7 @@
 			isa = PBXGroup;
 			children = (
 				6F653B331DCAD99B001328FF /* main.swift */,
+				6FBEF08C1E0930090071EE5A /* HttpServer.swift */,
 			);
 			path = NutilSampleOSX;
 			sourceTree = "<group>";
@@ -266,6 +273,8 @@
 				6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */,
 				6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */,
 				6F763EEA1DFD48F400C0A8C7 /* HttpUtils.swift */,
+				6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */,
+				6FBEF0881E0922110071EE5A /* HttpFactory.swift */,
 			);
 			path = http;
 			sourceTree = "<group>";
@@ -473,6 +482,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6F653B281DCAD8F8001328FF /* Socket.swift in Sources */,
+				6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */,
 				6F653B2A1DCAD8F8001328FF /* Trace.swift in Sources */,
 				6F653CCD1DD2F649001328FF /* Error.swift in Sources */,
 				6F9925F61DD6F9820093D4F3 /* UnixBridge.cpp in Sources */,
@@ -485,6 +495,7 @@
 				6F653B271DCAD8F8001328FF /* Acceptor.swift in Sources */,
 				6F763EEB1DFD48F400C0A8C7 /* HttpUtils.swift in Sources */,
 				6F653BB31DCD7084001328FF /* OpenSslLib.swift in Sources */,
+				6FBEF0891E0922110071EE5A /* HttpFactory.swift in Sources */,
 				6F653BB61DCEE427001328FF /* SslSocket.swift in Sources */,
 				6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */,
 				6F653B2C1DCAD8F8001328FF /* Utils.swift in Sources */,
@@ -518,6 +529,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6FBEF08D1E0930090071EE5A /* HttpServer.swift in Sources */,
 				6F653B341DCAD99B001328FF /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

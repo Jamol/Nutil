@@ -9,16 +9,12 @@
 import Foundation
 import Darwin
 
-public protocol AcceptDelegate {
-    func onAccept(_ fd: Int32, _ ip: String, _ port: Int)
-}
-
 public class Acceptor {
     private var fd_: SOCKET_FD = -1
     private var stop_ = false
     private var queue_: DispatchQueue? = nil // serial queue
     private var source_: DispatchSourceRead? = nil
-    public var delegate: AcceptDelegate? = nil
+    fileprivate var cbAccept: ((SOCKET_FD, String, Int) -> Void)?
     
     public init () {
         
@@ -116,7 +112,7 @@ public class Acceptor {
             if s != -1 {
                 let info = getNameInfo(&ssaddr)
                 infoTrace("Acceptor.onAccept, fd=\(s), addr=\(info.addr), port=\(info.port)")
-                delegate?.onAccept(s, info.addr, info.port)
+                cbAccept?(s, info.addr, info.port)
             } else {
                 if errno != EWOULDBLOCK && !self.stop_ {
                     errTrace("Acceptor.onAccept, accept failed, err=\(errno)")
@@ -124,5 +120,11 @@ public class Acceptor {
                 break
             }
         } while (!self.stop_)
+    }
+}
+
+extension Acceptor {
+    public func onAccept(cb: @escaping (SOCKET_FD, String, Int) -> Void) {
+        cbAccept = cb
     }
 }

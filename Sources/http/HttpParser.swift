@@ -59,13 +59,13 @@ class HttpParser {
     fileprivate var isUpgrade = false
     fileprivate var isRequest = false
     
-    fileprivate var method = ""
-    fileprivate var urlString = ""
-    fileprivate var statusCode = 0
-    fileprivate var version = "HTTP/1.1"
-    fileprivate var url: URL!
+    var method = ""
+    var urlString = ""
+    var statusCode = 0
+    var version = "HTTP/1.1"
+    var url: URL!
     
-    fileprivate var headers = [String: String]()
+    var headers: [String: String] = [:]
     
     func reset() {
         readState = .line
@@ -220,8 +220,12 @@ class HttpParser {
             return false
         }
         let str = "HTTP/"
-        let r = Range(uncheckedBounds: (str.startIndex, str.endIndex))
-        isRequest = tokens[0].compare(str, options: .caseInsensitive, range: r, locale: nil) != .orderedSame
+        if str.utf8.count != tokens[0].utf8.count {
+            isRequest = true
+        } else {
+            let r = Range(uncheckedBounds: (str.startIndex, str.endIndex))
+            isRequest = tokens[0].compare(str, options: .caseInsensitive, range: r, locale: nil) != .orderedSame
+        }
         if isRequest {
             method = tokens[0]
             version = tokens[2]
@@ -399,11 +403,11 @@ class HttpParser {
     fileprivate func onHeaderComplete() {
         if let str = headers["content-length"] {
             contentLength = Int(str)
-            //infoTrace("onHeaderComplete, contentLength=\(contentLength)")
+            infoTrace("HttpParser, contentLength=\(contentLength)")
         }
         if let str = headers["transfer-encoding"] {
             isChunked = str == "chunked"
-            //infoTrace("onHeaderComplete, isChunked=\(isChunked)")
+            infoTrace("HttpParser, isChunked=\(isChunked)")
         }
         if headers["upgrade"] != nil {
             isUpgrade = true
