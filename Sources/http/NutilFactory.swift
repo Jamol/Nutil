@@ -1,5 +1,5 @@
 //
-//  HttpFactory.swift
+//  NutilFactory.swift
 //  Nutil
 //
 //  Created by Jamol Bao on 12/20/16.
@@ -62,7 +62,7 @@ public protocol WebSocket {
     @discardableResult func onSend(cb: @escaping () -> Void) -> Self
 }
 
-public class HttpFactory {
+public class NutilFactory {
     public class func createRequest(version: String) -> HttpRequest? {
         return Http1xRequest(version: version)
     }

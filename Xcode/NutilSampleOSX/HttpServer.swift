@@ -20,7 +20,7 @@ class HttpTest {
     fileprivate var filePath = ""
     
     func setFd(fd: SOCKET_FD, ver: String) {
-        response = HttpFactory.createResponse(version: ver)
+        response = NutilFactory.createResponse(version: ver)
         response
             .onData { (data: UnsafeMutableRawPointer, len: Int) in
                 self.bytesReceived += len
@@ -35,9 +35,10 @@ class HttpTest {
             }
             .onResponseComplete {
                 print("response completed")
+                self.response.reset() // prepare for reusing
             }
-            .onError {
-                print("onError")
+            .onError { err in
+                print("onError, err=\(err)")
             }
             .onSend {
                 if self.sendFile {
@@ -46,7 +47,7 @@ class HttpTest {
                     self.sendTestData()
                 }
             }
-        _ = response.attachFd(fd)
+        _ = response.attachFd(fd, nil, 0)
     }
     
     func handleRequest() {
@@ -111,8 +112,9 @@ class HttpTest {
         }
         
         var buf = [UInt8](repeating: 0, count: 4096)
+        let blen = buf.count
         let nread = buf.withUnsafeMutableBufferPointer {
-            return fread($0.baseAddress, 1, buf.count, fp)
+            return fread($0.baseAddress, 1, blen, fp)
         }
         fclose(fp)
         if nread > 0 {
@@ -125,6 +127,8 @@ class HttpTest {
             } else {
                 _ = response.sendData(nil, 0)
             }
+        } else {
+            _ = response.sendData(nil, 0)
         }
     }
     

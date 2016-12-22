@@ -38,7 +38,7 @@ public class UdpSocket : Socket
         return state == .open
     }
     
-    public func bind(_ addr: String, _ port: Int) -> Int {
+    public func bind(_ addr: String, _ port: Int) -> KMError {
         infoTrace("UdpSocket.bind, host=\(addr), port=\(port)")
         var status: Int32 = 0
         // Protocol configuration
@@ -54,24 +54,24 @@ public class UdpSocket : Socket
         
         var ssaddr = sockaddr_storage()
         if getAddrInfo(addr, port, &hints, &ssaddr) != 0 {
-            return -1
+            return .invalidParam
         }
         
         let fd = socket(Int32(ssaddr.ss_family), SOCK_DGRAM, 0)
         if(fd == -1) {
             errTrace("UdpSocket.bind, socket failed: " + String(validatingUTF8: strerror(errno))!)
-            return -1
+            return .sockError
         }
         status = Darwin.bind(fd, ssaddr.asSockaddrPointer(), ssaddr.length())
         if status < 0 {
             errTrace("UdpSocket.bind, bind failed: " + String(validatingUTF8: strerror(errno))!)
-            return -1
+            return .sockError
         }
         if !initWithFd(fd) {
-            return -1
+            return .failed
         }
         state = .open
-        return Int(status)
+        return .noError
     }
 
     override internal func processRead(fd: SOCKET_FD, rsource: DispatchSourceRead) {

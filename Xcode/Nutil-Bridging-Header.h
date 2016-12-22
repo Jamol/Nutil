@@ -6,6 +6,7 @@
 #import <openssl/ssl.h>
 #import <openssl/err.h>
 #import <openssl/rand.h>
+#include <openssl/sha.h>
 
 long _SSL_CTX_set_tlsext_servername_callback(SSL_CTX *ctx, int (*cb)(SSL *, int *, void *));
 void initSslThreading();

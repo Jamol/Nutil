@@ -120,7 +120,7 @@ class HttpMessage {
                 iovs.append(iov)
                 iov = iovec(iov_base: UnsafeMutableRawPointer(mutating: data), iov_len: len)
                 iovs.append(iov)
-                iov = iovec(iov_base: UnsafeMutablePointer<UInt8>(mutating: "\r\n"), iov_len: 2)
+                iov = iovec(iov_base: UnsafeMutablePointer<Int8>(mutating: kCRLF), iov_len: 2)
                 iovs.append(iov)
                 return sender.send(iovs)
             }
@@ -131,4 +131,15 @@ class HttpMessage {
             return ret
         }
     }
+    
+    func reset() {
+        headers.removeAll()
+        contentLength = nil
+        isChunked = false
+        bodyBytesSent = 0
+        statusCode = 0
+        completed = false
+    }
 }
+
+let kCRLF = "\r\n".utf8.map { Int8($0) }

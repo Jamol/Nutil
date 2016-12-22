@@ -47,7 +47,7 @@ let ret = ssl.connect("www.google.com", 443)
 #endif
 
 #if false
-    let req = HttpFactory.createRequest(version: "HTTP/1.1")!
+    let req = NutilFactory.createRequest(version: "HTTP/1.1")!
     req
         .onData { (data: UnsafeMutableRawPointer, len: Int) in
             print("data received, len=\(len)")
@@ -64,9 +64,24 @@ let ret = ssl.connect("www.google.com", 443)
     _ = req.sendRequest(method: "get", url: "http://www.163.com")
 #endif
 
-#if true
+#if false
     let server = HttpServer()
     _ = server.start(addr: "0.0.0.0", port: 8443)
+#endif
+
+#if true
+    let ws = NutilFactory.createWebSocket()
+    ws.onData { (data, len) in
+        print("WebSocket.onData, len=\(len)")
+    }
+    .onError { err in
+        print("WebSocket.onError, err=\(err)")
+    }
+    let ret = ws.connect(ws_url: "ws://127.0.0.1:8443") { err in
+        print("WebSocket.onConnect, err=\(err)")
+        let buf = Array<UInt8>(repeating: 64, count: 16*1024)
+        let ret = ws.sendData(buf, buf.count)
+    }
 #endif
 
 RunLoop.main.run()

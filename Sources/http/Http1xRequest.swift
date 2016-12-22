@@ -31,7 +31,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     fileprivate var cbData: DataCallback?
     fileprivate var cbHeader: EventCallback?
     fileprivate var cbComplete: EventCallback?
-    fileprivate var cbError: EventCallback?
+    fileprivate var cbError: ErrorCallback?
     fileprivate var cbSend: EventCallback?
     
     fileprivate var message = HttpMessage()
@@ -64,6 +64,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     }
     
     func sendRequest(method: String, url: String) -> KMError {
+        infoTrace("Http1xRequest.sendRequest, method=\(method), url=\(url)")
         self.url = URL(string: url)
         self.method = method
         
@@ -82,12 +83,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         }
         
         setState(.connecting)
-        let ret = connect(host, port)
-        if ret < 0 {
-            setState(.error)
-            return .sockError
-        }
-        return .noError
+        return connect(host, port)
     }
     
     func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int {
@@ -107,6 +103,12 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     
     func sendString(_ str: String) -> Int {
         return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
+    }
+    
+    func reset() {
+        parser.reset()
+        message.reset()
+        setState(.idle)
     }
     
     override func close() {
@@ -202,7 +204,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     
     override func handleOnError(err: KMError) {
         infoTrace("Http1xRequest.handleOnError, err=\(err)")
-        onError()
+        onError(err: err)
     }
     
     func onData(data: UnsafeMutableRawPointer, len: Int) {
@@ -221,14 +223,14 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         cbComplete?()
     }
     
-    func onError() {
+    func onError(err: KMError) {
         infoTrace("Http1xRequest.onError")
         if state == .receivingResponse && parser.setEOF(){
             return
         }
         if state < State.completed {
             setState(.error)
-            cbError?()
+            cbError?(err)
         } else {
             setState(.closed)
         }
@@ -251,7 +253,7 @@ extension Http1xRequest {
         return self
     }
     
-    @discardableResult func onError(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self {
         cbError = cb
         return self
     }

@@ -30,7 +30,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     fileprivate var cbHeader: EventCallback?
     fileprivate var cbRequest: EventCallback?
     fileprivate var cbReponse: EventCallback?
-    fileprivate var cbError: EventCallback?
+    fileprivate var cbError: ErrorCallback?
     fileprivate var cbSend: EventCallback?
     
     fileprivate var message = HttpMessage()
@@ -54,9 +54,9 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         super.close()
     }
     
-    func attachFd(_ fd: SOCKET_FD) -> Bool {
-        let ret = super.attachFd(fd)
-        return ret == 0
+    override func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
+        setState(.receivingRequest)
+        return super.attachFd(fd, initData, initSize)
     }
     
     func addHeader(name: String, value: String) {
@@ -68,6 +68,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     }
     
     func sendResponse(statusCode: Int, desc: String) -> KMError {
+        infoTrace("Http1xResponse.sendResponse, status=\(statusCode), state=\(state)")
         if state != .waitForResponse {
             return .invalidState
         }
@@ -116,6 +117,12 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
     }
     
+    func reset() {
+        parser.reset()
+        message.reset()
+        setState(.receivingRequest)
+    }
+    
     override func close() {
         cleanup()
     }
@@ -129,6 +136,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     }
     
     override func handleOnSend() {
+        super.handleOnSend()
         if state == .sendingHeader {
             if message.hasBody {
                 setState(.sendingBody)
@@ -150,7 +158,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     
     override func handleOnError(err: KMError) {
         infoTrace("Http1xResponse.handleOnError, err=\(err)")
-        onError()
+        onError(err: err)
     }
     
     func onData(data: UnsafeMutableRawPointer, len: Int) {
@@ -159,7 +167,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     }
     
     func onHeaderComplete() {
-        infoTrace("Http1xResponse.onHeaderComplete")
+        infoTrace("Http1xResponse.onHeaderComplete, method=\(parser.method), url=\(parser.urlString)")
         cbHeader?()
     }
     
@@ -169,11 +177,11 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         cbRequest?()
     }
     
-    func onError() {
+    func onError(err: KMError) {
         infoTrace("Http1xResponse.onError")
         if state < State.completed {
             setState(.error)
-            cbError?()
+            cbError?(err)
         } else {
             setState(.closed)
         }
@@ -201,7 +209,7 @@ extension Http1xResponse {
         return self
     }
     
-    @discardableResult func onError(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self {
         cbError = cb
         return self
     }

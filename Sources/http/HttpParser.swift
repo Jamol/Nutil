@@ -16,7 +16,7 @@ protocol HttpParserDelegate {
     func onData(data: UnsafeMutableRawPointer, len: Int)
     func onHeaderComplete()
     func onComplete()
-    func onError()
+    func onError(err: KMError)
 }
 
 class HttpParser {
@@ -57,7 +57,7 @@ class HttpParser {
     
     fileprivate var isPaused = false
     fileprivate var isUpgrade = false
-    fileprivate var isRequest = false
+    var isRequest = false
     
     var method = ""
     var urlString = ""
@@ -109,6 +109,56 @@ class HttpParser {
         }
     }
     
+    func paused() -> Bool {
+        return isPaused
+    }
+    
+    func isUpgradeTo(proto: String) -> Bool {
+        var str = headers[kUpgrade]
+        guard let upgrade = str else {
+            return false
+        }
+        if upgrade.caseInsensitiveCompare(proto) != .orderedSame {
+            return false
+        }
+        str = headers[kConnection]
+        guard let connection = str else {
+            return false
+        }
+        let tokens = connection.components(separatedBy: ",")
+        var hasUpgrade = false
+        for i in 0..<tokens.count {
+            var str = tokens[i]
+            str = str.trimmingCharacters(in: .whitespaces)
+            if str.caseInsensitiveCompare(kUpgrade) == .orderedSame {
+                hasUpgrade = true
+                break
+            }
+        }
+        if !hasUpgrade {
+            return false
+        }
+        if !isRequest && statusCode != 101 {
+            return false
+        }
+        if isRequest && proto.compare("h2c") == .orderedSame {
+            var hasHttp2Settings = false
+            for i in 0..<tokens.count {
+                var str = tokens[i]
+                str = str.trimmingCharacters(in: .whitespaces)
+                if str.caseInsensitiveCompare("HTTP2-Settings") == .orderedSame {
+                    hasHttp2Settings = true
+                    break
+                }
+            }
+            if !hasHttp2Settings {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
     func parse(data: UnsafeMutableRawPointer, len: Int) -> Int {
         if readState == .done || readState == .error {
             warnTrace("HttpParser::parse, invalid state: \(readState)")
@@ -122,7 +172,7 @@ class HttpParser {
         }
         let bytesRead = parseHttp(data: data, len: len)
         if readState == .error {
-            delegate?.onError()
+            delegate?.onError(err: .failed)
         }
         return bytesRead
     }
@@ -220,7 +270,7 @@ class HttpParser {
             return false
         }
         let str = "HTTP/"
-        if str.utf8.count != tokens[0].utf8.count {
+        if str.utf8.count >= tokens[0].utf8.count {
             isRequest = true
         } else {
             let r = Range(uncheckedBounds: (str.startIndex, str.endIndex))
@@ -265,7 +315,7 @@ class HttpParser {
         let index = line.index(before: r.upperBound)
         let name = line.substring(to: index).trimmingCharacters(in: .whitespaces)
         let value = line.substring(from: r.upperBound).trimmingCharacters(in: .whitespaces)
-        headers[name.lowercased()] = value
+        headers[name] = value
         return true
     }
     
@@ -401,15 +451,15 @@ class HttpParser {
     }
     
     fileprivate func onHeaderComplete() {
-        if let str = headers["content-length"] {
+        if let str = headers[kContentLength] {
             contentLength = Int(str)
             infoTrace("HttpParser, contentLength=\(contentLength)")
         }
-        if let str = headers["transfer-encoding"] {
+        if let str = headers[kTransferEncoding] {
             isChunked = str == "chunked"
             infoTrace("HttpParser, isChunked=\(isChunked)")
         }
-        if headers["upgrade"] != nil {
+        if headers[kUpgrade] != nil {
             isUpgrade = true
         }
         delegate?.onHeaderComplete()

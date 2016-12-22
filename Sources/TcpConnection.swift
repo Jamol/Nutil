@@ -13,6 +13,8 @@ class TcpConnection
     fileprivate let kRecvBufferSize = 64*1024
     let socket = TcpSocket()
     fileprivate var buffer = [UInt8]()
+    fileprivate var initBuffer: [UInt8]?
+    var isServer = false
     
     init () {
         socket
@@ -22,11 +24,18 @@ class TcpConnection
             .onClose(cb: onClose)
     }
     
-    func connect(_ addr: String, _ port: Int) -> Int {
+    func connect(_ addr: String, _ port: Int) -> KMError {
+        isServer = false
         return socket.connect(addr, port)
     }
     
-    func attachFd(_ fd: SOCKET_FD) -> Int {
+    func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
+        isServer = true
+        if initData != nil && initSize > 0 {
+            let ptr = initData!.assumingMemoryBound(to: UInt8.self)
+            let bbuf = UnsafeBufferPointer(start: ptr, count: initSize)
+            initBuffer = Array(bbuf)
+        }
         return socket.attachFd(fd)
     }
     
@@ -137,7 +146,7 @@ class TcpConnection
     }
     
     func handleOnSend() {
-        
+        _ = sendBufferedData()
     }
     
     func handleOnError(err: KMError) {
@@ -175,6 +184,16 @@ extension TcpConnection
     }
     
     fileprivate func onRead() {
+        if var ibuf = initBuffer {
+            let ilen = ibuf.count
+            let ret = ibuf.withUnsafeMutableBufferPointer {
+                handleInputData($0.baseAddress!, ilen)
+            }
+            initBuffer = nil
+            if !ret {
+                return
+            }
+        }
         var buf = Array<UInt8>(repeating: 0, count: kRecvBufferSize)
         buf.withUnsafeMutableBufferPointer() {
             guard let ptr = $0.baseAddress else {

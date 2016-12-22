@@ -37,15 +37,15 @@ public class SslSocket {
             .onClose(cb: onClose)
     }
     
-    public func bind(_ addr: String, _ port: Int) -> Int {
+    public func bind(_ addr: String, _ port: Int) -> KMError {
         return tcpSocket.bind(addr, port)
     }
     
-    public func connect(_ addr: String, _ port: Int) -> Int {
+    public func connect(_ addr: String, _ port: Int) -> KMError {
         return tcpSocket.connect(addr, port)
     }
     
-    public func attachFd(_ fd: Int32) -> Int {
+    public func attachFd(_ fd: Int32) -> KMError {
         return tcpSocket.attachFd(fd)
     }
     
