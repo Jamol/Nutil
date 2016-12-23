@@ -23,10 +23,10 @@ public class TcpSocket : Socket
     var state: SocketState = .idle
     public var isOpen: Bool { return state == .open }
     
-    fileprivate var cbConnect: ((KMError) -> Void)?
-    fileprivate var cbRead: (() -> Void)?
-    fileprivate var cbWrite: (() -> Void)?
-    fileprivate var cbClose: (() -> Void)?
+    fileprivate var cbConnect: ErrorCallback?
+    fileprivate var cbRead: EventCallback?
+    fileprivate var cbWrite: EventCallback?
+    fileprivate var cbClose: EventCallback?
     
     public init () {
         super.init(queue: nil)

@@ -58,10 +58,10 @@ let ret = ssl.connect("www.google.com", 443)
         .onRequestComplete {
             print("request completed")
         }
-        .onError {
-            print("request error")
+        .onError { err in
+            print("request error, err=\(err)")
         }
-    _ = req.sendRequest(method: "get", url: "http://www.163.com")
+    _ = req.sendRequest(method: "get", url: "https://www.google.com")
 #endif
 
 #if false
@@ -77,7 +77,7 @@ let ret = ssl.connect("www.google.com", 443)
     .onError { err in
         print("WebSocket.onError, err=\(err)")
     }
-    let ret = ws.connect(ws_url: "ws://127.0.0.1:8443") { err in
+    let ret = ws.connect(ws_url: "wss://127.0.0.1:8443") { err in
         print("WebSocket.onConnect, err=\(err)")
         let buf = Array<UInt8>(repeating: 64, count: 16*1024)
         let ret = ws.sendData(buf, buf.count)

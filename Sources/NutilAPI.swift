@@ -1,5 +1,5 @@
 //
-//  NutilFactory.swift
+//  NutilAPI.swift
 //  Nutil
 //
 //  Created by Jamol Bao on 12/20/16.
@@ -28,6 +28,7 @@ public protocol HttpRequest {
 }
 
 public protocol HttpResponse {
+    func setSslFlags(flags: UInt32)
     func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError
     func addHeader(name: String, value: String)
     func addHeader(name: String, value: Int)

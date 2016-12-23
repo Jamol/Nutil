@@ -11,12 +11,12 @@ import Foundation
 class TcpConnection
 {
     fileprivate let kRecvBufferSize = 64*1024
-    let socket = TcpSocket()
+    let socket = AutoScoket()
     fileprivate var buffer = [UInt8]()
     fileprivate var initBuffer: [UInt8]?
     var isServer = false
     
-    init () {
+    init() {
         socket
             .onConnect(cb: onConnect)
             .onRead(cb: onRead)

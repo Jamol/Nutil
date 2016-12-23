@@ -75,13 +75,15 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         checkHeaders()
         
         var port = 80
+        var sslFlags = SslFlag.none.rawValue
         if self.url.scheme?.caseInsensitiveCompare("https") == .orderedSame {
             port = 443
+            sslFlags = super.socket.getSslFlags() | SslFlag.sslDefault.rawValue
         }
         if self.url.port != nil {
             port = self.url.port!
         }
-        
+        super.socket.setSslFlags(flags: sslFlags)
         setState(.connecting)
         return connect(host, port)
     }

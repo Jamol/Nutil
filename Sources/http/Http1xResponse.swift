@@ -54,6 +54,10 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         super.close()
     }
     
+    func setSslFlags(flags: UInt32) {
+        super.socket.setSslFlags(flags: flags)
+    }
+    
     override func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
         setState(.receivingRequest)
         return super.attachFd(fd, initData, initSize)

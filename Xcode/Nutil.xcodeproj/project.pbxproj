@@ -34,10 +34,11 @@
 		6F9925FC1DD75A600093D4F3 /* HttpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FA1DD75A600093D4F3 /* HttpParser.swift */; };
 		6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */; };
 		6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */; };
-		6FBEF0891E0922110071EE5A /* NutilFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF0881E0922110071EE5A /* NutilFactory.swift */; };
 		6FBEF08D1E0930090071EE5A /* HttpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF08C1E0930090071EE5A /* HttpServer.swift */; };
 		6FDB7F861E0A5EC7002418B9 /* WebSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDB7F851E0A5EC7002418B9 /* WebSocket.swift */; };
 		6FDB7F881E0A5EE7002418B9 /* WSHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDB7F871E0A5EE7002418B9 /* WSHandler.swift */; };
+		6FDB7F8B1E0BC9B4002418B9 /* NutilAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDB7F8A1E0BC9B4002418B9 /* NutilAPI.swift */; };
+		6FDB7F8F1E0BD560002418B9 /* AutoScoket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDB7F8E1E0BD560002418B9 /* AutoScoket.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,10 +112,11 @@
 		6F9925FA1DD75A600093D4F3 /* HttpParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpParser.swift; sourceTree = "<group>"; };
 		6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http1xResponse.swift; sourceTree = "<group>"; };
 		6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpMessage.swift; sourceTree = "<group>"; };
-		6FBEF0881E0922110071EE5A /* NutilFactory.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NutilFactory.swift; sourceTree = "<group>"; };
 		6FBEF08C1E0930090071EE5A /* HttpServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpServer.swift; sourceTree = "<group>"; };
 		6FDB7F851E0A5EC7002418B9 /* WebSocket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebSocket.swift; sourceTree = "<group>"; };
 		6FDB7F871E0A5EE7002418B9 /* WSHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WSHandler.swift; sourceTree = "<group>"; };
+		6FDB7F8A1E0BC9B4002418B9 /* NutilAPI.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NutilAPI.swift; sourceTree = "<group>"; };
+		6FDB7F8E1E0BD560002418B9 /* AutoScoket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoScoket.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -228,15 +230,17 @@
 			children = (
 				6FDB7F841E0A5E8C002418B9 /* ws */,
 				6F9925F71DD759920093D4F3 /* http */,
-				6F653CCC1DD2F649001328FF /* Error.swift */,
 				6F653BB01DCD706C001328FF /* SSL */,
 				6F653B211DCAD8F8001328FF /* Acceptor.swift */,
+				6F653CCC1DD2F649001328FF /* Error.swift */,
+				6FDB7F8A1E0BC9B4002418B9 /* NutilAPI.swift */,
 				6F653B221DCAD8F8001328FF /* Socket.swift */,
+				6F763DFE1DFA81C400C0A8C7 /* TcpConnection.swift */,
 				6F653B231DCAD8F8001328FF /* TcpSocket.swift */,
 				6F653B241DCAD8F8001328FF /* Trace.swift */,
 				6F653B251DCAD8F8001328FF /* UdpSocket.swift */,
 				6F653B261DCAD8F8001328FF /* Utils.swift */,
-				6F763DFE1DFA81C400C0A8C7 /* TcpConnection.swift */,
+				6FDB7F8E1E0BD560002418B9 /* AutoScoket.swift */,
 			);
 			name = Sources;
 			path = ../Sources;
@@ -279,7 +283,6 @@
 				6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */,
 				6F763EEA1DFD48F400C0A8C7 /* HttpUtils.swift */,
 				6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */,
-				6FBEF0881E0922110071EE5A /* NutilFactory.swift */,
 			);
 			path = http;
 			sourceTree = "<group>";
@@ -496,6 +499,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6F653B281DCAD8F8001328FF /* Socket.swift in Sources */,
+				6FDB7F8B1E0BC9B4002418B9 /* NutilAPI.swift in Sources */,
 				6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */,
 				6F653B2A1DCAD8F8001328FF /* Trace.swift in Sources */,
 				6F653CCD1DD2F649001328FF /* Error.swift in Sources */,
@@ -504,6 +508,7 @@
 				6FDB7F881E0A5EE7002418B9 /* WSHandler.swift in Sources */,
 				6F653B2B1DCAD8F8001328FF /* UdpSocket.swift in Sources */,
 				6F9925F91DD75A0D0093D4F3 /* Http1xRequest.swift in Sources */,
+				6FDB7F8F1E0BD560002418B9 /* AutoScoket.swift in Sources */,
 				6F653B291DCAD8F8001328FF /* TcpSocket.swift in Sources */,
 				6F9925FC1DD75A600093D4F3 /* HttpParser.swift in Sources */,
 				6F653BB41DCD7084001328FF /* SslHandler.swift in Sources */,
@@ -511,7 +516,6 @@
 				6F763EEB1DFD48F400C0A8C7 /* HttpUtils.swift in Sources */,
 				6FDB7F861E0A5EC7002418B9 /* WebSocket.swift in Sources */,
 				6F653BB31DCD7084001328FF /* OpenSslLib.swift in Sources */,
-				6FBEF0891E0922110071EE5A /* NutilFactory.swift in Sources */,
 				6F653BB61DCEE427001328FF /* SslSocket.swift in Sources */,
 				6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */,
 				6F653B2C1DCAD8F8001328FF /* Utils.swift in Sources */,

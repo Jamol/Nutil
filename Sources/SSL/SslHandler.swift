@@ -45,6 +45,21 @@ class SslHandler {
         }
     }
     
+    func getAlpnSelected() -> String? {
+        if ssl == nil {
+            return nil
+        }
+        var len: UInt32 = 0
+        var buf: UnsafePointer<UInt8>?
+        SSL_get0_alpn_selected(ssl, &buf, &len)
+        if buf != nil && len > 0 {
+            let data = Data(bytes: buf!, count: Int(len))
+            return String(data: data, encoding: .utf8)
+        } else {
+            return nil
+        }
+    }
+    
     func setServerName(name: String) {
         if (SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name)) == 1) {
             return ; // success

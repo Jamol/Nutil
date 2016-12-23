@@ -8,16 +8,27 @@
 
 import Foundation
 
+public enum SslFlag: UInt32 {
+    case none = 0
+    case sslDefault         = 0x01
+    case allowExpiredCert   = 0x02
+    case allowInvalidCertCN = 0x04
+    case allowExpiredRoot   = 0x08
+    case allowAnyRoot       = 0x10
+    case allowRevokedCert   = 0x20
+}
+
 public class SslSocket {
     fileprivate let sslHandler = SslHandler()
     fileprivate var tcpSocket: TcpSocket!
     fileprivate var alpnProtos: AlpnProtos? = nil
     fileprivate var serverName = ""
+    fileprivate var sslFlags: UInt32 = 0
     
-    fileprivate var cbConnect: ((KMError) -> Void)?
-    fileprivate var cbRead: (() -> Void)?
-    fileprivate var cbWrite: (() -> Void)?
-    fileprivate var cbClose: (() -> Void)?
+    fileprivate var cbConnect: ErrorCallback?
+    fileprivate var cbRead: EventCallback?
+    fileprivate var cbWrite: EventCallback?
+    fileprivate var cbClose: EventCallback?
     
     public init() {
         tcpSocket = TcpSocket()
@@ -49,6 +60,10 @@ public class SslSocket {
         return tcpSocket.attachFd(fd)
     }
     
+    public func close() {
+        cleanup()
+    }
+    
     func cleanup() {
         sslHandler.close()
         tcpSocket.close()
@@ -61,17 +76,6 @@ extension SslSocket {
         let ret = sslHandler.receive(data: data, len: len)
         if ret < 0 {
             cleanup()
-        }
-        return ret
-    }
-    
-    public func read<T>(_ data: [T]) -> Int {
-        var data = data
-        let dlen = data.count * MemoryLayout<T>.size
-        var ret = 0
-        ret = data.withUnsafeMutableBufferPointer {
-            let ptr = $0.baseAddress
-            return self.read(ptr!, dlen)
         }
         return ret
     }
@@ -153,6 +157,32 @@ extension SslSocket {
 }
 
 extension SslSocket {
+    func setSslFlags(flags: UInt32) {
+        sslFlags = flags
+    }
+    
+    func getSslFlags() -> UInt32 {
+        return sslFlags
+    }
+    
+    func sslEnabled() -> Bool {
+        return sslFlags != SslFlag.none.rawValue
+    }
+    
+    func setAlpnProtocols(alpn: AlpnProtos) {
+        alpnProtos = alpn
+    }
+    
+    func getAlpnSelected() -> String? {
+        return sslHandler.getAlpnSelected()
+    }
+    
+    func setSslServerName(name: String) {
+        self.serverName = name
+    }
+}
+
+extension SslSocket {
     func startSslHandshake(role: SslRole) -> KMError {
         infoTrace("startSslHandshake, role=\(role), fd=\(tcpSocket.fd), state=\(tcpSocket.state)")
         sslHandler.close()
@@ -171,6 +201,16 @@ extension SslSocket {
             return .sslError
         }
         return .noError
+    }
+}
+
+extension SslSocket {
+    func sync(_ block: ((Void) -> Void)) {
+        tcpSocket.sync(block)
+    }
+    
+    func async(_ block: @escaping ((Void) -> Void)) {
+        tcpSocket.async(block)
     }
 }
 

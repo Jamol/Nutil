@@ -18,9 +18,9 @@ public class UdpSocket : Socket
     }
     fileprivate var state: SocketState = .idle
     
-    fileprivate var cbRead: (() -> Void)?
-    fileprivate var cbWrite: (() -> Void)?
-    fileprivate var cbClose: (() -> Void)?
+    fileprivate var cbRead: EventCallback?
+    fileprivate var cbWrite: EventCallback?
+    fileprivate var cbClose: EventCallback?
     
     public init () {
         super.init(queue: nil)
@@ -129,20 +129,6 @@ extension UdpSocket {
         }
         let info = getNameInfo(&ssaddr)
         return (ret, info.addr, info.port)
-    }
-    
-    public func read<T>(_ data: [T]) -> (ret: Int, addr: String, port: Int) {
-        var data = data
-        if state != .open {
-            return (0, "", 0)
-        }
-        let dlen = data.count * MemoryLayout<T>.size
-        var ret = (0, "", 0)
-        ret = data.withUnsafeMutableBufferPointer {
-            let ptr = $0.baseAddress
-            return self.read(ptr!, dlen)
-        }
-        return ret
     }
 }
 
