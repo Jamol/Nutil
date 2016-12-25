@@ -8,8 +8,10 @@
 
 import Foundation
 
-let kCR = "\r".utf8.map{ Int8($0) }[0]
-let kLF = "\n".utf8.map{ Int8($0) }[0]
+//let kCR = "\r".utf8.map{ Int8($0) }[0]
+//let kLF = "\n".utf8.map{ Int8($0) }[0]
+let kCR = UInt8(ascii: "\r")
+let kLF = UInt8(ascii: "\n")
 let kMaxHttpHeadSize = 10*1024*1024
 
 protocol HttpParserDelegate {
@@ -178,7 +180,7 @@ class HttpParser {
     }
     
     fileprivate func parseHttp(data: UnsafeMutableRawPointer, len: Int) -> Int {
-        var ptr = data.assumingMemoryBound(to: Int8.self)
+        var ptr = data.assumingMemoryBound(to: UInt8.self)
         var remain = len
         if readState == .line {
             let ret = getLine(data: ptr, len: remain)
@@ -319,7 +321,7 @@ class HttpParser {
         return true
     }
     
-    fileprivate func parseChunk(data: UnsafeMutablePointer<Int8>, len: Int) -> Int {
+    fileprivate func parseChunk(data: UnsafeMutablePointer<UInt8>, len: Int) -> Int {
         var ptr = data
         var remain = len
         while remain > 0 {
@@ -469,7 +471,7 @@ class HttpParser {
         delegate?.onComplete()
     }
     
-    fileprivate func saveData(data: UnsafeMutablePointer<Int8>, len: Int) -> Bool {
+    fileprivate func saveData(data: UnsafeMutablePointer<UInt8>, len: Int) -> Bool {
         if len + savedString.utf8.count > kMaxHttpHeadSize {
             return false
         }
@@ -480,7 +482,7 @@ class HttpParser {
         return true
     }
     
-    fileprivate func getLine(data: UnsafeMutablePointer<Int8>, len: Int) -> (line: String?, bytesRead: Int) {
+    fileprivate func getLine(data: UnsafeMutablePointer<UInt8>, len: Int) -> (line: String?, bytesRead: Int) {
         let str = String(bytesNoCopy: data, length: len, encoding: .ascii, freeWhenDone: false)
         guard let s = str else {
             return (nil, 0)

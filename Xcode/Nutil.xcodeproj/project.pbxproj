@@ -33,6 +33,19 @@
 		6F9925F91DD75A0D0093D4F3 /* Http1xRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */; };
 		6F9925FC1DD75A600093D4F3 /* HttpParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FA1DD75A600093D4F3 /* HttpParser.swift */; };
 		6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */; };
+		6FBEDC6B1E0E2CB30044BBF6 /* H2Frame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC6A1E0E2CB30044BBF6 /* H2Frame.swift */; };
+		6FBEDC6D1E0E4DFB0044BBF6 /* H2Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC6C1E0E4DFB0044BBF6 /* H2Utils.swift */; };
+		6FBEDC6F1E0FB3EB0044BBF6 /* FrameParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC6E1E0FB3EB0044BBF6 /* FrameParser.swift */; };
+		6FBEDC711E0FB4410044BBF6 /* FlowControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC701E0FB4410044BBF6 /* FlowControl.swift */; };
+		6FBEDC731E0FCA220044BBF6 /* H2Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC721E0FCA220044BBF6 /* H2Stream.swift */; };
+		6FBEDC751E0FCA570044BBF6 /* H2Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC741E0FCA570044BBF6 /* H2Connection.swift */; };
+		6FBEDC771E0FCA6F0044BBF6 /* H2ConnectionMgr.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC761E0FCA6F0044BBF6 /* H2ConnectionMgr.swift */; };
+		6FBEDC791E0FCA830044BBF6 /* Http2Request.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC781E0FCA830044BBF6 /* Http2Request.swift */; };
+		6FBEDC7B1E0FCAA20044BBF6 /* Http2Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC7A1E0FCAA20044BBF6 /* Http2Response.swift */; };
+		6FBEDC7E1E0FCB900044BBF6 /* HPacker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC7D1E0FCB900044BBF6 /* HPacker.swift */; };
+		6FBEDC801E0FCBAD0044BBF6 /* HPackTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC7F1E0FCBAD0044BBF6 /* HPackTable.swift */; };
+		6FBEDC821E0FCBC00044BBF6 /* StaticTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC811E0FCBC00044BBF6 /* StaticTable.swift */; };
+		6FBEDC841E0FCBF80044BBF6 /* HuffmanTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEDC831E0FCBF80044BBF6 /* HuffmanTable.swift */; };
 		6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */; };
 		6FBEF08D1E0930090071EE5A /* HttpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBEF08C1E0930090071EE5A /* HttpServer.swift */; };
 		6FDB7F861E0A5EC7002418B9 /* WebSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDB7F851E0A5EC7002418B9 /* WebSocket.swift */; };
@@ -111,6 +124,19 @@
 		6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http1xRequest.swift; sourceTree = "<group>"; };
 		6F9925FA1DD75A600093D4F3 /* HttpParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpParser.swift; sourceTree = "<group>"; };
 		6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http1xResponse.swift; sourceTree = "<group>"; };
+		6FBEDC6A1E0E2CB30044BBF6 /* H2Frame.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = H2Frame.swift; sourceTree = "<group>"; };
+		6FBEDC6C1E0E4DFB0044BBF6 /* H2Utils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = H2Utils.swift; sourceTree = "<group>"; };
+		6FBEDC6E1E0FB3EB0044BBF6 /* FrameParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameParser.swift; sourceTree = "<group>"; };
+		6FBEDC701E0FB4410044BBF6 /* FlowControl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlowControl.swift; sourceTree = "<group>"; };
+		6FBEDC721E0FCA220044BBF6 /* H2Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = H2Stream.swift; sourceTree = "<group>"; };
+		6FBEDC741E0FCA570044BBF6 /* H2Connection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = H2Connection.swift; sourceTree = "<group>"; };
+		6FBEDC761E0FCA6F0044BBF6 /* H2ConnectionMgr.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = H2ConnectionMgr.swift; sourceTree = "<group>"; };
+		6FBEDC781E0FCA830044BBF6 /* Http2Request.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http2Request.swift; sourceTree = "<group>"; };
+		6FBEDC7A1E0FCAA20044BBF6 /* Http2Response.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Http2Response.swift; sourceTree = "<group>"; };
+		6FBEDC7D1E0FCB900044BBF6 /* HPacker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPacker.swift; sourceTree = "<group>"; };
+		6FBEDC7F1E0FCBAD0044BBF6 /* HPackTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPackTable.swift; sourceTree = "<group>"; };
+		6FBEDC811E0FCBC00044BBF6 /* StaticTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StaticTable.swift; sourceTree = "<group>"; };
+		6FBEDC831E0FCBF80044BBF6 /* HuffmanTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HuffmanTable.swift; sourceTree = "<group>"; };
 		6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpMessage.swift; sourceTree = "<group>"; };
 		6FBEF08C1E0930090071EE5A /* HttpServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpServer.swift; sourceTree = "<group>"; };
 		6FDB7F851E0A5EC7002418B9 /* WebSocket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebSocket.swift; sourceTree = "<group>"; };
@@ -278,6 +304,7 @@
 		6F9925F71DD759920093D4F3 /* http */ = {
 			isa = PBXGroup;
 			children = (
+				6FBEDC681E0E2C5A0044BBF6 /* v2 */,
 				6F9925FA1DD75A600093D4F3 /* HttpParser.swift */,
 				6F9925FB1DD75A600093D4F3 /* Http1xResponse.swift */,
 				6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */,
@@ -285,6 +312,34 @@
 				6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */,
 			);
 			path = http;
+			sourceTree = "<group>";
+		};
+		6FBEDC681E0E2C5A0044BBF6 /* v2 */ = {
+			isa = PBXGroup;
+			children = (
+				6FBEDC7C1E0FCB5F0044BBF6 /* hpack */,
+				6FBEDC6A1E0E2CB30044BBF6 /* H2Frame.swift */,
+				6FBEDC6C1E0E4DFB0044BBF6 /* H2Utils.swift */,
+				6FBEDC6E1E0FB3EB0044BBF6 /* FrameParser.swift */,
+				6FBEDC701E0FB4410044BBF6 /* FlowControl.swift */,
+				6FBEDC721E0FCA220044BBF6 /* H2Stream.swift */,
+				6FBEDC741E0FCA570044BBF6 /* H2Connection.swift */,
+				6FBEDC761E0FCA6F0044BBF6 /* H2ConnectionMgr.swift */,
+				6FBEDC781E0FCA830044BBF6 /* Http2Request.swift */,
+				6FBEDC7A1E0FCAA20044BBF6 /* Http2Response.swift */,
+			);
+			path = v2;
+			sourceTree = "<group>";
+		};
+		6FBEDC7C1E0FCB5F0044BBF6 /* hpack */ = {
+			isa = PBXGroup;
+			children = (
+				6FBEDC7D1E0FCB900044BBF6 /* HPacker.swift */,
+				6FBEDC7F1E0FCBAD0044BBF6 /* HPackTable.swift */,
+				6FBEDC811E0FCBC00044BBF6 /* StaticTable.swift */,
+				6FBEDC831E0FCBF80044BBF6 /* HuffmanTable.swift */,
+			);
+			path = hpack;
 			sourceTree = "<group>";
 		};
 		6FDB7F841E0A5E8C002418B9 /* ws */ = {
@@ -501,23 +556,36 @@
 				6F653B281DCAD8F8001328FF /* Socket.swift in Sources */,
 				6FDB7F8B1E0BC9B4002418B9 /* NutilAPI.swift in Sources */,
 				6FBEF0871E07DBD00071EE5A /* HttpMessage.swift in Sources */,
+				6FBEDC731E0FCA220044BBF6 /* H2Stream.swift in Sources */,
+				6FBEDC711E0FB4410044BBF6 /* FlowControl.swift in Sources */,
 				6F653B2A1DCAD8F8001328FF /* Trace.swift in Sources */,
 				6F653CCD1DD2F649001328FF /* Error.swift in Sources */,
 				6F9925F61DD6F9820093D4F3 /* UnixBridge.cpp in Sources */,
+				6FBEDC771E0FCA6F0044BBF6 /* H2ConnectionMgr.swift in Sources */,
 				6F763DFF1DFA81C400C0A8C7 /* TcpConnection.swift in Sources */,
 				6FDB7F881E0A5EE7002418B9 /* WSHandler.swift in Sources */,
 				6F653B2B1DCAD8F8001328FF /* UdpSocket.swift in Sources */,
+				6FBEDC751E0FCA570044BBF6 /* H2Connection.swift in Sources */,
+				6FBEDC7B1E0FCAA20044BBF6 /* Http2Response.swift in Sources */,
+				6FBEDC6B1E0E2CB30044BBF6 /* H2Frame.swift in Sources */,
 				6F9925F91DD75A0D0093D4F3 /* Http1xRequest.swift in Sources */,
+				6FBEDC791E0FCA830044BBF6 /* Http2Request.swift in Sources */,
 				6FDB7F8F1E0BD560002418B9 /* AutoScoket.swift in Sources */,
+				6FBEDC6D1E0E4DFB0044BBF6 /* H2Utils.swift in Sources */,
 				6F653B291DCAD8F8001328FF /* TcpSocket.swift in Sources */,
 				6F9925FC1DD75A600093D4F3 /* HttpParser.swift in Sources */,
+				6FBEDC7E1E0FCB900044BBF6 /* HPacker.swift in Sources */,
 				6F653BB41DCD7084001328FF /* SslHandler.swift in Sources */,
 				6F653B271DCAD8F8001328FF /* Acceptor.swift in Sources */,
 				6F763EEB1DFD48F400C0A8C7 /* HttpUtils.swift in Sources */,
 				6FDB7F861E0A5EC7002418B9 /* WebSocket.swift in Sources */,
+				6FBEDC801E0FCBAD0044BBF6 /* HPackTable.swift in Sources */,
 				6F653BB31DCD7084001328FF /* OpenSslLib.swift in Sources */,
+				6FBEDC821E0FCBC00044BBF6 /* StaticTable.swift in Sources */,
+				6FBEDC6F1E0FB3EB0044BBF6 /* FrameParser.swift in Sources */,
 				6F653BB61DCEE427001328FF /* SslSocket.swift in Sources */,
 				6F9925FD1DD75A600093D4F3 /* Http1xResponse.swift in Sources */,
+				6FBEDC841E0FCBF80044BBF6 /* HuffmanTable.swift in Sources */,
 				6F653B2C1DCAD8F8001328FF /* Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

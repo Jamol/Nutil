@@ -135,7 +135,7 @@ class WebSocketImpl : TcpConnection, WebSocket {
             if state == .error || state == .closed {
                 return false
             }
-            if ret != WSError.noErr && ret != .moreData {
+            if ret != WSError.noErr && ret != .incomplete {
                 cleanup()
                 setState(.closed)
                 cbError?(.failed)

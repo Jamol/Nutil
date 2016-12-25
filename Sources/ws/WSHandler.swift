@@ -12,7 +12,7 @@ let kMaxFrameDataLength = 10*1024*1024
 
 enum WSError {
     case noErr
-    case moreData
+    case incomplete
     case handshake
     case invalidParam
     case invalidState
@@ -23,6 +23,7 @@ enum WSError {
 
 class WSHandler : HttpParserDelegate {
     enum WSOpcode: UInt8 {
+        case _continue_ = 0
         case text   = 1
         case binary = 2
         case closed = 8
@@ -264,7 +265,7 @@ class WSHandler : HttpParserDelegate {
                             pos += 1
                             dctx.pos += 1
                         }
-                        return WSError.moreData
+                        return WSError.incomplete
                     }
                 } else {
                     dctx.hdr.length = Int(dctx.hdr.plen)
@@ -283,7 +284,7 @@ class WSHandler : HttpParserDelegate {
                         dctx.pos += 1
                     }
                     if dctx.pos < expectLen {
-                        return WSError.moreData
+                        return WSError.incomplete
                     }
                     dctx.pos = 0
                 }
@@ -323,13 +324,13 @@ class WSHandler : HttpParserDelegate {
                     let copyLen = len - pos
                     let bbuf = UnsafeMutableBufferPointer(start: data+pos, count: copyLen)
                     dctx.buf.append(contentsOf: bbuf)
-                    return WSError.moreData
+                    return WSError.incomplete
                 }
             default:
                 return WSError.invalidFrame
             }
         }
-        return dctx.state == .hdr1 ? .noErr : .moreData
+        return dctx.state == .hdr1 ? .noErr : .incomplete
     }
     
     func handleDataMask(_ hdr: FrameHeader, _ data: UnsafeMutablePointer<UInt8>, _ len: Int) {
@@ -337,7 +338,7 @@ class WSHandler : HttpParserDelegate {
             return
         }
         for i in 0..<len {
-            data[i] = data[i] ^ hdr.maskey[i%4]
+            data[i] ^= hdr.maskey[i%4]
         }
     }
     

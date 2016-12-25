@@ -120,7 +120,7 @@ class HttpMessage {
                 iovs.append(iov)
                 iov = iovec(iov_base: UnsafeMutableRawPointer(mutating: data), iov_len: len)
                 iovs.append(iov)
-                iov = iovec(iov_base: UnsafeMutablePointer<Int8>(mutating: kCRLF), iov_len: 2)
+                iov = iovec(iov_base: UnsafeMutablePointer<UInt8>(mutating: kCRLF), iov_len: 2)
                 iovs.append(iov)
                 return sender.send(iovs)
             }
@@ -142,4 +142,4 @@ class HttpMessage {
     }
 }
 
-let kCRLF = "\r\n".utf8.map { Int8($0) }
+let kCRLF = "\r\n".utf8.map { UInt8($0) }

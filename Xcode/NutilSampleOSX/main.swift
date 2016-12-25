@@ -46,7 +46,7 @@ ssl.onConnect {
 let ret = ssl.connect("www.google.com", 443)
 #endif
 
-#if false
+#if true
     let req = NutilFactory.createRequest(version: "HTTP/1.1")!
     req
         .onData { (data: UnsafeMutableRawPointer, len: Int) in
@@ -69,7 +69,7 @@ let ret = ssl.connect("www.google.com", 443)
     _ = server.start(addr: "0.0.0.0", port: 8443)
 #endif
 
-#if true
+#if false
     let ws = NutilFactory.createWebSocket()
     ws.onData { (data, len) in
         print("WebSocket.onData, len=\(len)")
