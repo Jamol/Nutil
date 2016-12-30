@@ -1,0 +1,3 @@
+module COpenSSL [system] {
+ header "openssl.h"
+}

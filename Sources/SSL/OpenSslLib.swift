@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import COpenSSL
 
 typealias AlpnProtos = [UInt8]
 
@@ -67,8 +68,10 @@ func createSslContext(_ caFile: String, _ certFile: String, _ keyFile: String, _
         }
         var flags = SSL_OP_ALL | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1
         flags |= SSL_OP_NO_COMPRESSION
+        //let flags = UInt32(SSL_OP_ALL) | UInt32(SSL_OP_NO_COMPRESSION)
         // SSL_OP_SAFARI_ECDHE_ECDSA_BUG
         _ = SSL_CTX_set_options(ctx, flags)
+        //SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)
         _ = SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER)
         _ = SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE)
         _ = SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY)

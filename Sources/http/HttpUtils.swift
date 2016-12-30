@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import COpenSSL
 
 let kDefauleUserAgent = "kuma 1.0"
 let kContentLength = "Content-Length"
