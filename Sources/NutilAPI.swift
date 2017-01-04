@@ -9,30 +9,30 @@
 import Foundation
 
 public protocol HttpRequest {
-    func addHeader(name: String, value: String)
-    func addHeader(name: String, value: Int)
-    func sendRequest(method: String, url: String) -> KMError
+    func addHeader(_ name: String, _ value: String)
+    func addHeader(_ name: String, _ value: Int)
+    func sendRequest(_ method: String, _ url: String) -> KMError
     func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int
     func sendString(_ str: String) -> Int
     func reset()
     func close()
     
     func getStatusCode() -> Int
-    func getHeader(name: String) -> String?
+    func getHeader(_ name: String) -> String?
     
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
-    @discardableResult func onHeaderComplete(cb: @escaping () -> Void) -> Self
-    @discardableResult func onRequestComplete(cb: @escaping () -> Void) -> Self
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
+    @discardableResult func onHeaderComplete(_ cb: @escaping () -> Void) -> Self
+    @discardableResult func onRequestComplete(_ cb: @escaping () -> Void) -> Self
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self
 }
 
 public protocol HttpResponse {
-    func setSslFlags(flags: UInt32)
+    func setSslFlags(_ flags: UInt32)
     func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError
-    func addHeader(name: String, value: String)
-    func addHeader(name: String, value: Int)
-    func sendResponse(statusCode: Int, desc: String) -> KMError
+    func addHeader(_ name: String, _ value: String)
+    func addHeader(_ name: String, _ value: Int)
+    func sendResponse(_ statusCode: Int, _ desc: String) -> KMError
     func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int
     func sendString(_ str: String) -> Int
     func reset()
@@ -41,26 +41,26 @@ public protocol HttpResponse {
     func getMethod() -> String
     func getUrl() -> String
     func getPath() -> String
-    func getHeader(name: String) -> String?
-    func getParam(name: String) -> String?
+    func getHeader(_ name: String) -> String?
+    func getParam(_ name: String) -> String?
     
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
-    @discardableResult func onHeaderComplete(cb: @escaping () -> Void) -> Self
-    @discardableResult func onRequestComplete(cb: @escaping () -> Void) -> Self
-    @discardableResult func onResponseComplete(cb: @escaping () -> Void) -> Self
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
+    @discardableResult func onHeaderComplete(_ cb: @escaping () -> Void) -> Self
+    @discardableResult func onRequestComplete(_ cb: @escaping () -> Void) -> Self
+    @discardableResult func onResponseComplete(_ cb: @escaping () -> Void) -> Self
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self
 }
 
 public protocol WebSocket {
-    func connect(ws_url: String, cb: @escaping (KMError) -> Void) -> KMError
+    func connect(_ ws_url: String, _ cb: @escaping (KMError) -> Void) -> KMError
     func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError
     func sendData(_ data: UnsafeRawPointer, _ len: Int) -> Int
     func close()
     
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self
 }
 
 public class NutilFactory {

@@ -31,8 +31,11 @@ _ = a.listen("127.0.0.1", 52328)
 #if false
 var udp = UdpSocket()
 udp.onRead {
-    let d = [UInt8](repeating: 0, count: 4096)
-    let ret = udp.read(d)
+    var d = [UInt8](repeating: 0, count: 4096)
+    let len = d.count
+    let ret = d.withUnsafeMutableBufferPointer() {
+        return udp.read($0.baseAddress!, len)
+    }
     print("Udp.onRead, ret=\(ret)")
 }
 _ = udp.bind("127.0.0.1", 52328)
@@ -61,7 +64,7 @@ let ret = ssl.connect("www.google.com", 443)
         .onError { err in
             print("request error, err=\(err)")
         }
-    _ = req.sendRequest(method: "get", url: "https://www.google.com")
+    _ = req.sendRequest("GET", "https://www.google.com")
 #endif
 
 #if false
@@ -77,7 +80,7 @@ let ret = ssl.connect("www.google.com", 443)
     .onError { err in
         print("WebSocket.onError, err=\(err)")
     }
-    let ret = ws.connect(ws_url: "wss://127.0.0.1:8443") { err in
+    let ret = ws.connect("wss://127.0.0.1:8443") { err in
         print("WebSocket.onConnect, err=\(err)")
         let buf = Array<UInt8>(repeating: 64, count: 16*1024)
         let ret = ws.sendData(buf, buf.count)

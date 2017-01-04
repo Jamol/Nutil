@@ -41,7 +41,7 @@ class HttpMessage {
     
     var sender: MessageSender!
     
-    func addHeader(name: String, value: String) {
+    func addHeader(_ name: String, _ value: String) {
         if !name.isEmpty {
             if name.caseInsensitiveCompare(kContentLength) == .orderedSame {
                 contentLength = Int(value)
@@ -52,15 +52,15 @@ class HttpMessage {
         }
     }
     
-    func addHeader(name: String, value: Int) {
-        addHeader(name: name, value: String(value))
+    func addHeader(_ name: String, _ value: Int) {
+        addHeader(name, String(value))
     }
     
-    func hasHeader(name: String) -> Bool {
+    func hasHeader(_ name: String) -> Bool {
         return headers[name] != nil
     }
     
-    func buildMessageHeader(method: String, url: String, ver: String) -> String {
+    func buildMessageHeader(_ method: String, _ url: String, _ ver: String) -> String {
         isRequest = true
         var req = method + " " + url + " " + ver
         req += "\r\n"
@@ -71,7 +71,7 @@ class HttpMessage {
         return req
     }
     
-    func buildMessageHeader(statusCode: Int, desc: String, ver: String) -> String {
+    func buildMessageHeader(_ statusCode: Int, _ desc: String, _ ver: String) -> String {
         isRequest = false
         self.statusCode = statusCode
         var rsp = "\(ver) \(statusCode)"

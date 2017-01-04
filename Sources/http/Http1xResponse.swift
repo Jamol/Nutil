@@ -54,8 +54,8 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         super.close()
     }
     
-    func setSslFlags(flags: UInt32) {
-        super.socket.setSslFlags(flags: flags)
+    func setSslFlags(_ flags: UInt32) {
+        super.socket.setSslFlags(flags)
     }
     
     override func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
@@ -63,20 +63,20 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         return super.attachFd(fd, initData, initSize)
     }
     
-    func addHeader(name: String, value: String) {
-        message.addHeader(name: name, value: value)
+    func addHeader(_ name: String, _ value: String) {
+        message.addHeader(name, value)
     }
     
-    func addHeader(name: String, value: Int) {
-        message.addHeader(name: name, value: value)
+    func addHeader(_ name: String, _ value: Int) {
+        message.addHeader(name, value)
     }
     
-    func sendResponse(statusCode: Int, desc: String) -> KMError {
+    func sendResponse(_ statusCode: Int, _ desc: String) -> KMError {
         infoTrace("Http1xResponse.sendResponse, status=\(statusCode), state=\(state)")
         if state != .waitForResponse {
             return .invalidState
         }
-        let rsp = message.buildMessageHeader(statusCode: statusCode, desc: desc, ver: version)
+        let rsp = message.buildMessageHeader(statusCode, desc, version)
         setState(.sendingHeader)
         let ret = send(rsp)
         if ret < 0 {
@@ -193,32 +193,32 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
 }
 
 extension Http1xResponse {
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
         cbData = cb
         return self
     }
     
-    @discardableResult func onHeaderComplete(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onHeaderComplete(_ cb: @escaping () -> Void) -> Self {
         cbHeader = cb
         return self
     }
     
-    @discardableResult func onRequestComplete(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onRequestComplete(_ cb: @escaping () -> Void) -> Self {
         cbRequest = cb
         return self
     }
     
-    @discardableResult func onResponseComplete(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onResponseComplete(_ cb: @escaping () -> Void) -> Self {
         cbReponse = cb
         return self
     }
     
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self {
         cbError = cb
         return self
     }
     
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self {
         cbSend = cb
         return self
     }
@@ -235,11 +235,11 @@ extension Http1xResponse {
         return parser.url.path
     }
     
-    func getHeader(name: String) -> String? {
+    func getHeader(_ name: String) -> String? {
         return parser.headers[name]
     }
     
-    func getParam(name: String) -> String? {
+    func getParam(_ name: String) -> String? {
         return nil
     }
 }

@@ -55,15 +55,15 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         super.close()
     }
     
-    func addHeader(name: String, value: String) {
-        message.addHeader(name: name, value: value)
+    func addHeader(_ name: String, _ value: String) {
+        message.addHeader(name, value)
     }
     
-    func addHeader(name: String, value: Int) {
-        message.addHeader(name: name, value: value)
+    func addHeader(_ name: String, _ value: Int) {
+        message.addHeader(name, value)
     }
     
-    func sendRequest(method: String, url: String) -> KMError {
+    func sendRequest(_ method: String, _ url: String) -> KMError {
         infoTrace("Http1xRequest.sendRequest, method=\(method), url=\(url)")
         self.url = URL(string: url)
         self.method = method
@@ -83,7 +83,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         if self.url.port != nil {
             port = self.url.port!
         }
-        super.socket.setSslFlags(flags: sslFlags)
+        super.socket.setSslFlags(sslFlags)
         setState(.connecting)
         return connect(host, port)
     }
@@ -121,28 +121,28 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         return parser.statusCode
     }
     
-    func getHeader(name: String) -> String? {
+    func getHeader(_ name: String) -> String? {
         return parser.headers[name]
     }
     
     fileprivate func checkHeaders() {
-        if !message.hasHeader(name: "Accept") {
-            addHeader(name: "Accept", value: "*/*")
+        if !message.hasHeader("Accept") {
+            addHeader("Accept", "*/*")
         }
-        if !message.hasHeader(name: "Content-Type") {
-            addHeader(name: "Content-Type", value: "application/octet-stream")
+        if !message.hasHeader("Content-Type") {
+            addHeader("Content-Type", "application/octet-stream")
         }
-        if !message.hasHeader(name: "User-Agent") {
-            addHeader(name: "User-Agent", value: kDefauleUserAgent)
+        if !message.hasHeader("User-Agent") {
+            addHeader("User-Agent", kDefauleUserAgent)
         }
-        if !message.hasHeader(name: "Cache-Control") {
-            addHeader(name: "Cache-Control", value: "no-cache")
+        if !message.hasHeader("Cache-Control") {
+            addHeader("Cache-Control", "no-cache")
         }
-        if !message.hasHeader(name: "Pragma") {
-            addHeader(name: "Pragma", value: "no-cache")
+        if !message.hasHeader("Pragma") {
+            addHeader("Pragma", "no-cache")
         }
-        if !message.hasHeader(name: "Host") {
-            addHeader(name: "Host", value: url.host!)
+        if !message.hasHeader("Host") {
+            addHeader("Host", url.host!)
         }
     }
     
@@ -154,7 +154,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         if let query = url.query {
             u += "?" + query
         }
-        let req = message.buildMessageHeader(method: method, url: u, ver: version)
+        let req = message.buildMessageHeader(method, u, version)
         setState(.sendingHeader)
         let ret = send(req)
         if ret < 0 {
@@ -240,27 +240,27 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
 }
 
 extension Http1xRequest {
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
         cbData = cb
         return self
     }
     
-    @discardableResult func onHeaderComplete(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onHeaderComplete(_ cb: @escaping () -> Void) -> Self {
         cbHeader = cb
         return self
     }
     
-    @discardableResult func onRequestComplete(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onRequestComplete(_ cb: @escaping () -> Void) -> Self {
         cbComplete = cb
         return self
     }
     
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self {
         cbError = cb
         return self
     }
     
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self {
         cbSend = cb
         return self
     }

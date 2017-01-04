@@ -18,10 +18,10 @@ class TcpConnection
     
     init() {
         socket
-            .onConnect(cb: onConnect)
-            .onRead(cb: onRead)
-            .onWrite(cb: onWrite)
-            .onClose(cb: onClose)
+            .onConnect(onConnect)
+            .onRead(onRead)
+            .onWrite(onWrite)
+            .onClose(onClose)
     }
     
     func connect(_ addr: String, _ port: Int) -> KMError {

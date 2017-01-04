@@ -124,7 +124,7 @@ public class Acceptor {
 }
 
 extension Acceptor {
-    public func onAccept(cb: @escaping (SOCKET_FD, String, Int) -> Void) {
+    public func onAccept(_ cb: @escaping (SOCKET_FD, String, Int) -> Void) {
         cbAccept = cb
     }
 }

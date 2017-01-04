@@ -60,7 +60,7 @@ class WebSocketImpl : TcpConnection, WebSocket {
         self.origin = origin
     }
     
-    func connect(ws_url: String, cb: @escaping (KMError) -> Void) -> KMError {
+    func connect(_ ws_url: String, _ cb: @escaping (KMError) -> Void) -> KMError {
         if state != .idle {
             return .invalidState
         }
@@ -83,7 +83,7 @@ class WebSocketImpl : TcpConnection, WebSocket {
             port = self.url.port!
         }
         
-        super.socket.setSslFlags(flags: sslFlags)
+        super.socket.setSslFlags(sslFlags)
         cbConnect = cb
         setState(.connecting)
         return connect(host, port)
@@ -209,17 +209,17 @@ class WebSocketImpl : TcpConnection, WebSocket {
 }
 
 extension WebSocketImpl {
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
         cbData = cb
         return self
     }
     
-    @discardableResult func onError(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self {
         cbError = cb
         return self
     }
     
-    @discardableResult func onSend(cb: @escaping () -> Void) -> Self {
+    @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self {
         cbSend = cb
         return self
     }

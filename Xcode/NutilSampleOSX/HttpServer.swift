@@ -53,15 +53,15 @@ class HttpTest {
     func handleRequest() {
         if response.getMethod().caseInsensitiveCompare("OPTIONS") == .orderedSame {
             isOptions = true
-            response.addHeader(name: "Content-Length", value: 0)
+            response.addHeader("Content-Length", 0)
         }
-        var str = response.getHeader(name: "Access-Control-Request-Headers")
+        var str = response.getHeader("Access-Control-Request-Headers")
         if let acrh = str {
-            response.addHeader(name: "Access-Control-Allow-Headers", value: acrh)
+            response.addHeader("Access-Control-Allow-Headers", acrh)
         }
-        str = response.getHeader(name: "Access-Control-Request-Method")
+        str = response.getHeader("Access-Control-Request-Method")
         if let acrm = str {
-            response.addHeader(name: "Access-Control-Allow-Methods", value: acrm)
+            response.addHeader("Access-Control-Allow-Methods", acrm)
         }
         
         var statusCode = 200
@@ -75,11 +75,11 @@ class HttpTest {
             } else if response.getPath().compare("/testdata") == .orderedSame {
                 sendFile = false
                 var contentLength = 256*1024*1024
-                let ua = response.getHeader(name: "User-Agent")
+                let ua = response.getHeader("User-Agent")
                 if let ua = ua, ua.compare("kuma") != .orderedSame {
                     contentLength = 128*1024*1024
                 }
-                response.addHeader(name: "Content-Length", value: contentLength)
+                response.addHeader("Content-Length", contentLength)
             } else {
                 filePath += response.getPath()
                 sendFile = true
@@ -89,17 +89,17 @@ class HttpTest {
                 let mgr = FileManager.default
                 if mgr.fileExists(atPath: filePath) {
                     let ext = (filePath as NSString).pathExtension
-                    response.addHeader(name: "Content-Type", value: getMime(ext: ext))
+                    response.addHeader("Content-Type", getMime(ext: ext))
                 } else {
                     statusCode = 404
                     desc = "Not Found"
-                    response.addHeader(name: "Content-Type", value: "text/html")
+                    response.addHeader("Content-Type", "text/html")
                 }
-                response.addHeader(name: "Transfer-Encoding", value: "chunked")
+                response.addHeader("Transfer-Encoding", "chunked")
             }
         }
         
-        _ = response.sendResponse(statusCode: statusCode, desc: desc)
+        _ = response.sendResponse(statusCode, desc)
     }
     
     func sendTestFile() {
@@ -158,7 +158,7 @@ class HttpServer {
         let execPath = Bundle.main.executablePath!
         let path = (execPath as NSString).deletingLastPathComponent
         wwwPath = path + kPathSeparator + "www"
-        acceptor.onAccept(cb: onAccept)
+        acceptor.onAccept(onAccept)
     }
     
     func start(addr: String, port: Int) -> Bool {

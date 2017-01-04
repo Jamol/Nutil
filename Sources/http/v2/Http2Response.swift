@@ -8,3 +8,7 @@
 //
 
 import Foundation
+
+class Http2Response {
+    
+}

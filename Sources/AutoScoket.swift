@@ -145,10 +145,10 @@ extension AutoScoket {
 }
 
 extension AutoScoket {
-    func setSslFlags(flags: UInt32) {
+    func setSslFlags(_ flags: UInt32) {
         if flags != SslFlag.none.rawValue {
             initSslSocket()
-            ssl!.setSslFlags(flags: flags)
+            ssl!.setSslFlags(flags)
         }
     }
     
@@ -163,9 +163,9 @@ extension AutoScoket {
         return ssl != nil
     }
     
-    func setAlpnProtocols(alpn: AlpnProtos) {
+    func setAlpnProtocols(_ alpn: AlpnProtos) {
         initSslSocket()
-        ssl!.setAlpnProtocols(alpn: alpn)
+        ssl!.setAlpnProtocols(alpn)
     }
     
     func getAlpnSelected() -> String? {
@@ -175,29 +175,29 @@ extension AutoScoket {
         return nil
     }
     
-    func setServerName(name: String) {
+    func setServerName(_ name: String) {
         initSslSocket()
-        ssl!.setSslServerName(name: name)
+        ssl!.setSslServerName(name)
     }
 }
 
 extension AutoScoket {
-    @discardableResult public func onConnect(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult public func onConnect(_ cb: @escaping (KMError) -> Void) -> Self {
         cbConnect = cb
         return self
     }
     
-    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onRead(_ cb: @escaping () -> Void) -> Self {
         cbRead = cb
         return self
     }
     
-    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onWrite(_ cb: @escaping () -> Void) -> Self {
         cbWrite = cb
         return self
     }
     
-    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onClose(_ cb: @escaping () -> Void) -> Self {
         cbClose = cb
         return self
     }

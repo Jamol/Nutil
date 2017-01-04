@@ -288,22 +288,22 @@ extension TcpSocket {
 }
 
 extension TcpSocket {
-    @discardableResult public func onConnect(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult public func onConnect(_ cb: @escaping (KMError) -> Void) -> Self {
         cbConnect = cb
         return self
     }
     
-    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onRead(_ cb: @escaping () -> Void) -> Self {
         cbRead = cb
         return self
     }
     
-    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onWrite(_ cb: @escaping () -> Void) -> Self {
         cbWrite = cb
         return self
     }
     
-    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onClose(_ cb: @escaping () -> Void) -> Self {
         cbClose = cb
         return self
     }

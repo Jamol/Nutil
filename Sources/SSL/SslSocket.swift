@@ -33,19 +33,19 @@ public class SslSocket {
     public init() {
         tcpSocket = TcpSocket()
         tcpSocket
-            .onConnect(cb: onConnect)
-            .onRead(cb: onRead)
-            .onWrite(cb: onWrite)
-            .onClose(cb: onClose)
+            .onConnect(onConnect)
+            .onRead(onRead)
+            .onWrite(onWrite)
+            .onClose(onClose)
     }
     
     public init (queue: DispatchQueue?) {
         tcpSocket = TcpSocket(queue: queue)
         tcpSocket
-            .onConnect(cb: onConnect)
-            .onRead(cb: onRead)
-            .onWrite(cb: onWrite)
-            .onClose(cb: onClose)
+            .onConnect(onConnect)
+            .onRead(onRead)
+            .onWrite(onWrite)
+            .onClose(onClose)
     }
     
     public func bind(_ addr: String, _ port: Int) -> KMError {
@@ -112,7 +112,7 @@ extension SslSocket {
 extension SslSocket {
     func onConnect(err: KMError) {
         if err == .noError {
-            let err = startSslHandshake(role: .client)
+            let err = startSslHandshake(.client)
             if err == .noError && sslHandler.getState() == .handshake {
                 return // continue to SSL handshake
             }
@@ -157,7 +157,7 @@ extension SslSocket {
 }
 
 extension SslSocket {
-    func setSslFlags(flags: UInt32) {
+    func setSslFlags(_ flags: UInt32) {
         sslFlags = flags
     }
     
@@ -169,7 +169,7 @@ extension SslSocket {
         return sslFlags != SslFlag.none.rawValue
     }
     
-    func setAlpnProtocols(alpn: AlpnProtos) {
+    func setAlpnProtocols(_ alpn: AlpnProtos) {
         alpnProtos = alpn
     }
     
@@ -177,13 +177,13 @@ extension SslSocket {
         return sslHandler.getAlpnSelected()
     }
     
-    func setSslServerName(name: String) {
+    func setSslServerName(_ name: String) {
         self.serverName = name
     }
 }
 
 extension SslSocket {
-    func startSslHandshake(role: SslRole) -> KMError {
+    func startSslHandshake(_ role: SslRole) -> KMError {
         infoTrace("startSslHandshake, role=\(role), fd=\(tcpSocket.fd), state=\(tcpSocket.state)")
         sslHandler.close()
         try? sslHandler.attachFd(fd: tcpSocket.fd, role: role)
@@ -215,22 +215,22 @@ extension SslSocket {
 }
 
 extension SslSocket {
-    @discardableResult public func onConnect(cb: @escaping (KMError) -> Void) -> Self {
+    @discardableResult public func onConnect(_ cb: @escaping (KMError) -> Void) -> Self {
         cbConnect = cb
         return self
     }
     
-    @discardableResult public func onRead(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onRead(_ cb: @escaping () -> Void) -> Self {
         cbRead = cb
         return self
     }
     
-    @discardableResult public func onWrite(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onWrite(_ cb: @escaping () -> Void) -> Self {
         cbWrite = cb
         return self
     }
     
-    @discardableResult public func onClose(cb: @escaping () -> Void) -> Self {
+    @discardableResult public func onClose(_ cb: @escaping () -> Void) -> Self {
         cbClose = cb
         return self
     }
