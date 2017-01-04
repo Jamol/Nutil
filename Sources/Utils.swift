@@ -127,6 +127,38 @@ func sendto(_ fd: SOCKET_FD, _ data: UnsafeRawPointer, _ len: Int, _ ssaddr: Uns
     return ret
 }
 
+fileprivate let number1 = "0123456789".utf8.map { UInt8($0) }
+fileprivate let number2 = "abcdef".utf8.map { UInt8($0) }
+fileprivate let number3 = "ABCDEF".utf8.map { UInt8($0) }
+let kSP = UInt8(ascii: " ")
+func hexStringToArray(hexStr: String) -> [UInt8] {
+    var bbuf = Array<UInt8>(repeating: 0, count: 256)
+    for i in 0..<10 {
+        bbuf[Int(number1[i])] = UInt8(i)
+    }
+    for i in 0..<6 {
+        bbuf[Int(number2[i])] = UInt8(i + 10)
+        bbuf[Int(number3[i])] = UInt8(i + 10)
+    }
+    var rbuf: [UInt8] = []
+    let slen = hexStr.utf8.count
+    hexStr.withCString {
+        let ptr = $0
+        var i = 0
+        while i < slen {
+            if UInt8(ptr[i]) == kSP {
+                i += 1
+                continue
+            }
+            var u8: UInt8 = 0
+            u8 = (bbuf[Int(ptr[i])] << 4) | bbuf[Int(ptr[i + 1])]
+            rbuf.append(u8)
+            i += 2
+        }
+    }
+    return rbuf
+}
+
 // func < for enums
 func <<T: RawRepresentable>(a: T, b: T) -> Bool where T.RawValue: Comparable {
     return a.rawValue < b.rawValue

@@ -21,7 +21,10 @@ class HPackTable {
     
     init () {
         for i in 0..<HPACK_STATIC_TABLE_SIZE {
-            indexMap[hpackStaticTable[i].name] = (-1, i)
+            let str = hpackStaticTable[i].name + hpackStaticTable[i].value
+            if indexMap[str] == nil {
+                indexMap[str] = (-1, i)
+            }
         }
     }
     

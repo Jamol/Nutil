@@ -25,6 +25,10 @@ class HPacker {
         return .none
     }
     
+    func setMaxTableSize(_ maxSize: Int) {
+        table.setMaxSize(maxSize)
+    }
+    
     func encodeSizeUpdate(_ sz: Int, _ buf: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {
         var ptr = buf
         let end = buf + len
@@ -190,11 +194,13 @@ func huffDecodeBits(_ dst: UnsafeMutablePointer<UInt8>, _ bits: UInt8, _ state: 
     if (entry.flags & nghttp2_huff_decode_flag.NGHTTP2_HUFF_FAIL.rawValue) != 0 {
         return (nil, state, false)
     }
+    var pos: Int = 0
     if (entry.flags & nghttp2_huff_decode_flag.NGHTTP2_HUFF_SYM.rawValue) != 0 {
         dst[0] = entry.sym
+        pos = 1
     }
     let ending = (entry.flags & nghttp2_huff_decode_flag.NGHTTP2_HUFF_ACCEPTED.rawValue) != 0
-    return (dst+1, entry.state, ending)
+    return (dst + pos, entry.state, ending)
 }
 
 func huffDecode(_ src: UnsafePointer<UInt8>, _ len: Int) -> (ret: Int, str: String?) {
