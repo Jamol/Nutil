@@ -34,7 +34,7 @@ public enum NUError: Error, CustomStringConvertible {
     }
 }
 
-public enum KMError {
+public enum KMError : Int {
     case noError
     case failed
     case invalidState

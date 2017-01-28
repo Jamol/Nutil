@@ -133,6 +133,14 @@ struct FrameHeader {
 
 class H2Frame {
     var hdr = FrameHeader()
+    var streamId: UInt32 {
+        get {
+            return hdr.streamId
+        }
+        set {
+            hdr.streamId = newValue
+        }
+    }
     
     func addFlags(_ flags: UInt8) {
         hdr.flags |= flags
@@ -142,12 +150,28 @@ class H2Frame {
         hdr.flags &= ~flags
     }
     
+    func getFlags() -> UInt8 {
+        return hdr.flags
+    }
+    
+    func hasEndStream() -> Bool {
+        return (getFlags() & kH2FrameFlagEndStream) != 0
+    }
+    
     func type() -> H2FrameType {
         fatalError("MUST override type")
     }
     
     func calcPayloadSize() -> Int {
         fatalError("MUST override calcPayloadSize")
+    }
+    
+    func getPayloadLength() -> Int {
+        if hdr.length > 0 {
+            return hdr.length
+        } else {
+            return calcPayloadSize()
+        }
     }
     
     func encode(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {
@@ -216,6 +240,11 @@ class DataFrame : H2Frame {
         return size
     }
     
+    func setData(_ data: UnsafeRawPointer?, _ len: Int) {
+        self.data = data
+        self.size = len
+    }
+    
     override func encode(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {
         var pos = 0
         let ret = encodeHeader(dst, len)
@@ -226,8 +255,10 @@ class DataFrame : H2Frame {
         if len - pos < size {
             return -1
         }
-        memcpy(dst + pos, data, size)
-        pos += size
+        if data != nil && size > 0 {
+            memcpy(dst + pos, data, size)
+            pos += size
+        }
         return pos
     }
     
@@ -258,6 +289,7 @@ class HeadersFrame : H2Frame {
     var block: UnsafeRawPointer?
     var bsize = 0
     
+    var headers: NameValueArray = []
     var hsize = 0
     
     override func type() -> H2FrameType {
@@ -270,6 +302,19 @@ class HeadersFrame : H2Frame {
             sz += kH2PriorityPayloadSize
         }
         return sz
+    }
+    
+    func hasPriority() -> Bool {
+        return (getFlags() & kH2FrameFlagPriority) != 0
+    }
+    
+    func hasEndHeaders() -> Bool {
+        return (getFlags() & kH2FrameFlagEndHeaders) != 0
+    }
+    
+    func setHeaders(_ headers: NameValueArray, _ hdrSize: Int) {
+        self.headers = headers
+        hsize = hdrSize
     }
     
     override func encode(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {
@@ -415,8 +460,10 @@ class RSTStreamFrame : H2Frame {
     }
 }
 
+typealias H2SettingArray = [(key: UInt16, value: UInt32)]
+
 class SettingsFrame : H2Frame {
-    var params: [UInt16: UInt32] = [:]
+    var params: H2SettingArray = []
     
     var ack: Bool {
         get {
@@ -440,7 +487,7 @@ class SettingsFrame : H2Frame {
         return kH2SettingItemSize * params.count
     }
     
-    func encodePayload(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int, _ para: [UInt16: UInt32]) -> Int {
+    func encodePayload(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int, _ para: H2SettingArray) -> Int {
         var pos = 0
         for kv in para {
             if pos + kH2SettingItemSize > len {
@@ -471,7 +518,7 @@ class SettingsFrame : H2Frame {
     
     override func decode(_ hdr: FrameHeader, _ payload: UnsafePointer<UInt8>) -> H2Error {
         setFrameHeader(hdr)
-        if hdr.streamId == 0 {
+        if hdr.streamId != 0 {
             return .protocolError
         }
         if ack && hdr.length != 0 {
@@ -486,7 +533,7 @@ class SettingsFrame : H2Frame {
         while len > 0 {
             let key = decode_u16(ptr)
             let value = decode_u32(ptr + 2)
-            params[key] = value
+            params.append((key, value))
             ptr += kH2SettingItemSize
             len -= kH2SettingItemSize
         }
@@ -708,6 +755,7 @@ class ContinuationFrame : H2Frame {
     var block: UnsafeRawPointer?
     var bsize = 0
     
+    var headers: NameValueArray = []
     var hsize = 0
     
     override func type() -> H2FrameType {
@@ -716,6 +764,10 @@ class ContinuationFrame : H2Frame {
     
     override func calcPayloadSize() -> Int {
         return bsize
+    }
+    
+    func hasEndHeaders() -> Bool {
+        return (getFlags() & kH2FrameFlagEndHeaders) != 0
     }
     
     override func encode(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {

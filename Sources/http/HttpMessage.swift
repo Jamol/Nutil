@@ -15,76 +15,13 @@ protocol MessageSender {
     func send(_ iovs: [iovec]) -> Int
 }
 
-class HttpMessage {
-    var isRequest = true
-    var headers: [String: String] = [:]
-    var contentLength: Int?
-    var isChunked = false
+class HttpMessage : HttpHeader {
     var bodyBytesSent = 0
-    fileprivate var statusCode = 0
     fileprivate var completed = false
     
     var isCompleted: Bool { return completed }
-    var hasBody: Bool {
-        if isChunked {
-            return true
-        }
-        if let clen = contentLength {
-            return clen > 0
-        }
-        if isRequest {
-            return false
-        }
-        return !((100 <= statusCode && statusCode <= 199) ||
-            204 == statusCode || 304 == statusCode)
-    }
     
     var sender: MessageSender!
-    
-    func addHeader(_ name: String, _ value: String) {
-        if !name.isEmpty {
-            if name.caseInsensitiveCompare(kContentLength) == .orderedSame {
-                contentLength = Int(value)
-            } else if name.caseInsensitiveCompare(kTransferEncoding) == .orderedSame {
-                isChunked = value.caseInsensitiveCompare("chunked") == .orderedSame
-            }
-            headers[name] = value
-        }
-    }
-    
-    func addHeader(_ name: String, _ value: Int) {
-        addHeader(name, String(value))
-    }
-    
-    func hasHeader(_ name: String) -> Bool {
-        return headers[name] != nil
-    }
-    
-    func buildMessageHeader(_ method: String, _ url: String, _ ver: String) -> String {
-        isRequest = true
-        var req = method + " " + url + " " + ver
-        req += "\r\n"
-        for kv in headers {
-            req += kv.key + ": " + kv.value + "\r\n"
-        }
-        req += "\r\n"
-        return req
-    }
-    
-    func buildMessageHeader(_ statusCode: Int, _ desc: String, _ ver: String) -> String {
-        isRequest = false
-        self.statusCode = statusCode
-        var rsp = "\(ver) \(statusCode)"
-        if (!desc.isEmpty) {
-            rsp += " " + desc
-        }
-        rsp += "\r\n"
-        for kv in headers {
-            rsp += kv.key + ": " + kv.value + "\r\n"
-        }
-        rsp += "\r\n"
-        return rsp
-    }
     
     func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int {
         if isChunked {
@@ -132,12 +69,9 @@ class HttpMessage {
         }
     }
     
-    func reset() {
-        headers.removeAll()
-        contentLength = nil
-        isChunked = false
+    override func reset() {
+        super.reset()
         bodyBytesSent = 0
-        statusCode = 0
         completed = false
     }
 }

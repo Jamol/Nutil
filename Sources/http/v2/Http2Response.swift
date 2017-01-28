@@ -9,6 +9,15 @@
 
 import Foundation
 
-class Http2Response {
+class Http2Response : HttpHeader {
+    fileprivate var stream: H2Stream?
     
+    func attachStream(_ conn: H2Connection, _ streamId: UInt32) -> KMError {
+        stream = conn.getStream(streamId)
+        if stream == nil {
+            return .invalidParam
+        }
+        
+        return .noError
+    }
 }

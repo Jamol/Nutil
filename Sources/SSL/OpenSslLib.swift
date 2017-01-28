@@ -11,7 +11,7 @@ import COpenSSL
 
 typealias AlpnProtos = [UInt8]
 
-fileprivate var alpnProtos: AlpnProtos = [2, 97, 50]
+var alpnProtos: AlpnProtos = [2, 104, 50]
 
 fileprivate var certsPath = "./"
 fileprivate var sslCtxServer: UnsafeMutablePointer<SSL_CTX>?
@@ -170,7 +170,7 @@ func verifyCallback(_ ok: Int32, _ ctx: UnsafeMutablePointer<X509_STORE_CTX>?) -
                     infoTrace("verifyCallback, issuer=\(str)")
                 }
             } else {
-                errTrace("verifyCallback failed, depth=\(ctx.pointee.error_depth), err=\(ctx.pointee.error), subject=\(cbuf)");
+                errTrace("verifyCallback failed, depth=\(ctx.pointee.error_depth), err=\(ctx.pointee.error)");
             }
         }
     }

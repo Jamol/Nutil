@@ -10,7 +10,7 @@
 import Foundation
 
 class HPackTable {
-    fileprivate var dynamicTable: [(name: String, value: String)] = []
+    fileprivate var dynamicTable: NameValueArray = []
     fileprivate var tableSize = 0
     fileprivate var limitSize = 4096
     fileprivate var maxSize = 4096
@@ -21,9 +21,9 @@ class HPackTable {
     
     init () {
         for i in 0..<HPACK_STATIC_TABLE_SIZE {
-            let str = hpackStaticTable[i].name + hpackStaticTable[i].value
-            if indexMap[str] == nil {
-                indexMap[str] = (-1, i)
+            let key = hpackStaticTable[i].name + hpackStaticTable[i].value
+            if indexMap[key] == nil {
+                indexMap[key] = (-1, i)
             }
         }
     }
@@ -64,7 +64,8 @@ class HPackTable {
         tableSize += entrySize
         if isEncoder {
             indexSequence += 1
-            updateIndex(name, indexSequence)
+            let key = name + value
+            updateIndex(key, indexSequence)
         }
         return true
     }
@@ -106,7 +107,8 @@ class HPackTable {
                 tableSize = 0
             }
             if isEncoder {
-                removeIndex(entry.name);
+                let key = entry.name + entry.value
+                removeIndex(key);
             }
             dynamicTable.remove(at: dynamicTable.count - 1)
             evicted += entrySize;
@@ -120,30 +122,30 @@ class HPackTable {
         return indexSequence - idxSeq;
     }
     
-    fileprivate func updateIndex(_ name: String, _ idxSeq: Int) {
-        if indexMap[name] != nil {
-            indexMap[name]!.idxD = idxSeq
+    fileprivate func updateIndex(_ key: String, _ idxSeq: Int) {
+        if indexMap[key] != nil {
+            indexMap[key]!.idxD = idxSeq
         } else {
-            indexMap[name] = (idxSeq, -1)
+            indexMap[key] = (idxSeq, -1)
         }
     }
     
-    fileprivate func removeIndex(_ name: String) {
-        let DS = indexMap[name]
+    fileprivate func removeIndex(_ key: String) {
+        let DS = indexMap[key]
         if let DS = DS {
             let idx = getDynamicIndex(DS.idxD)
             if idx == dynamicTable.count - 1 {
                 if DS.idxS == -1 {
-                    indexMap.removeValue(forKey: name)
+                    indexMap.removeValue(forKey: key)
                 } else {
-                    indexMap[name]!.idxD = -1 // reset dynamic table index
+                    indexMap[key]!.idxD = -1 // reset dynamic table index
                 }
             }
         }
     }
     
-    fileprivate func getIndex(_ name: String) -> (idxD: Int, idxS: Int) {
-        let DS = indexMap[name]
+    fileprivate func getIndex(_ key: String) -> (idxD: Int, idxS: Int) {
+        let DS = indexMap[key]
         if let DS = DS {
             let d = getDynamicIndex(DS.idxD)
             let s = DS.idxS
@@ -157,7 +159,12 @@ class HPackTable {
         var indexD = -1
         var indexS = -1
         var valueIndexed = false
-        (indexD, indexS) = getIndex(name)
+        
+        let key = name + value
+        (indexD, indexS) = getIndex(key)
+        if indexD == -1 && indexS == -1 {
+            (indexD, indexS) = getIndex(name)
+        }
         if indexD != -1 && indexD < dynamicTable.count
             && name == dynamicTable[indexD].name {
             index = indexD + HPACK_DYNAMIC_START_INDEX

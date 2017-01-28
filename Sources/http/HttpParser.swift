@@ -15,10 +15,10 @@ let kLF = UInt8(ascii: "\n")
 let kMaxHttpHeadSize = 10*1024*1024
 
 protocol HttpParserDelegate {
-    func onData(data: UnsafeMutableRawPointer, len: Int)
-    func onHeaderComplete()
-    func onComplete()
-    func onError(err: KMError)
+    func onHttpData(data: UnsafeMutableRawPointer, len: Int)
+    func onHttpHeaderComplete()
+    func onHttpComplete()
+    func onHttpError(err: KMError)
 }
 
 class HttpParser {
@@ -169,12 +169,12 @@ class HttpParser {
         if readState == .body && !isChunked && contentLength == nil {
             // read untill EOF, return directly
             totalBytesRead += len
-            delegate?.onData(data: data, len: len)
+            delegate?.onHttpData(data: data, len: len)
             return len
         }
         let bytesRead = parseHttp(data: data, len: len)
         if readState == .error {
-            delegate?.onError(err: .failed)
+            delegate?.onHttpError(err: .failed)
         }
         return bytesRead
     }
@@ -252,12 +252,12 @@ class HttpParser {
                 remain -= notifySize
                 totalBytesRead += notifySize
                 readState = .done
-                delegate?.onData(data: notifyData, len: notifySize)
+                delegate?.onHttpData(data: notifyData, len: notifySize)
                 onComplete()
             } else { // need more data or read untill EOF
                 if remain > 0 {
                     totalBytesRead += remain
-                    delegate?.onData(data: ptr, len: remain)
+                    delegate?.onHttpData(data: ptr, len: remain)
                 }
                 return len
             }
@@ -367,11 +367,11 @@ class HttpParser {
                     totalBytesRead += notifySize
                     chunkSize = 0
                     chunkState = .data_cr
-                    delegate?.onData(data: notifyData, len: notifySize)
+                    delegate?.onHttpData(data: notifyData, len: notifySize)
                 } else {
                     totalBytesRead += remain
                     chunkSize -= remain
-                    delegate?.onData(data: ptr, len: remain)
+                    delegate?.onHttpData(data: ptr, len: remain)
                     return len
                 }
                 
@@ -446,7 +446,7 @@ class HttpParser {
     func setEOF() -> Bool {
         if readUntillEOF() && readState == .body {
             readState = .done
-            delegate?.onComplete()
+            delegate?.onHttpComplete()
             return true
         }
         return false
@@ -464,11 +464,11 @@ class HttpParser {
         if headers[kUpgrade] != nil {
             isUpgrade = true
         }
-        delegate?.onHeaderComplete()
+        delegate?.onHttpHeaderComplete()
     }
     
     fileprivate func onComplete() {
-        delegate?.onComplete()
+        delegate?.onHttpComplete()
     }
     
     fileprivate func saveData(data: UnsafeMutablePointer<UInt8>, len: Int) -> Bool {

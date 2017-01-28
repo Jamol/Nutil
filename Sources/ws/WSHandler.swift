@@ -342,15 +342,15 @@ class WSHandler : HttpParserDelegate {
         }
     }
     
-    func onData(data: UnsafeMutableRawPointer, len: Int) {
+    func onHttpData(data: UnsafeMutableRawPointer, len: Int) {
         errTrace("WSHandler, onHttpData, len=\(len)")
     }
     
-    func onHeaderComplete() {
+    func onHttpHeaderComplete() {
         
     }
     
-    func onComplete() {
+    func onHttpComplete() {
         if parser.isRequest {
             handleRequest()
         } else {
@@ -358,7 +358,7 @@ class WSHandler : HttpParserDelegate {
         }
     }
     
-    func onError(err: KMError) {
+    func onHttpError(err: KMError) {
         state = .error
     }
 }

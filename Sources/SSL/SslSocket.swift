@@ -189,7 +189,9 @@ extension SslSocket {
         try? sslHandler.attachFd(fd: tcpSocket.fd, role: role)
         if (role == .client) {
             if let alpn = alpnProtos {
-                sslHandler.setAlpnProtocols(alpn: alpn)
+                if !sslHandler.setAlpnProtocols(alpn: alpn) {
+                    warnTrace("startSslHandshake, failed to set alpn: \(alpn)")
+                }
             }
             if !serverName.isEmpty {
                 sslHandler.setServerName(name: serverName)

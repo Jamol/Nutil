@@ -13,7 +13,7 @@ let TABLE_ENTRY_SIZE_EXTRA = 32
 let HPACK_DYNAMIC_START_INDEX = 62
 let HPACK_STATIC_TABLE_SIZE = 61
 
-let hpackStaticTable: [(name: String, value: String)] = [
+let hpackStaticTable: NameValueArray = [
     (":authority", ""),
     (":method", "GET"),
     (":method", "POST"),

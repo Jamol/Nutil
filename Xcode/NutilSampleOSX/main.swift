@@ -49,7 +49,7 @@ ssl.onConnect {
 let ret = ssl.connect("www.google.com", 443)
 #endif
 
-#if true
+#if false
     let req = NutilFactory.createRequest(version: "HTTP/1.1")!
     req
         .onData { (data: UnsafeMutableRawPointer, len: Int) in
@@ -85,6 +85,24 @@ let ret = ssl.connect("www.google.com", 443)
         let buf = Array<UInt8>(repeating: 64, count: 16*1024)
         let ret = ws.sendData(buf, buf.count)
     }
+#endif
+
+#if true
+    let req = NutilFactory.createRequest(version: "HTTP/2.0")!
+    req
+    .onData { (data: UnsafeMutableRawPointer, len: Int) in
+        print("data received, len=\(len)")
+    }
+    .onHeaderComplete {
+        print("header completed")
+    }
+    .onRequestComplete {
+        print("request completed")
+    }
+    .onError { err in
+        print("request error, err=\(err)")
+}
+_ = req.sendRequest("GET", "https://0.0.0.0:8443")
 #endif
 
 RunLoop.main.run()

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6F3731F01E371D8000479457 /* HttpHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3731EF1E371D8000479457 /* HttpHeader.swift */; };
+		6F3731F11E371D8000479457 /* HttpHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3731EF1E371D8000479457 /* HttpHeader.swift */; };
 		6F653AF61DCAD6FD001328FF /* Nutil.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F653AEC1DCAD6FD001328FF /* Nutil.framework */; };
 		6F653AFB1DCAD6FD001328FF /* NutilOSXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F653AFA1DCAD6FD001328FF /* NutilOSXTests.swift */; };
 		6F653AFD1DCAD6FE001328FF /* NutilOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F653AEF1DCAD6FD001328FF /* NutilOSX.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -278,6 +280,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6F3731EF1E371D8000479457 /* HttpHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpHeader.swift; sourceTree = "<group>"; };
 		6F653AEC1DCAD6FD001328FF /* Nutil.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Nutil.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F653AEF1DCAD6FD001328FF /* NutilOSX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NutilOSX.h; sourceTree = "<group>"; };
 		6F653AF01DCAD6FD001328FF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -582,6 +585,7 @@
 				6F9925F81DD75A0D0093D4F3 /* Http1xRequest.swift */,
 				6F763EEA1DFD48F400C0A8C7 /* HttpUtils.swift */,
 				6FBEF0861E07DBD00071EE5A /* HttpMessage.swift */,
+				6F3731EF1E371D8000479457 /* HttpHeader.swift */,
 			);
 			path = http;
 			sourceTree = "<group>";
@@ -1084,6 +1088,7 @@
 				6FBEDC731E0FCA220044BBF6 /* H2Stream.swift in Sources */,
 				6FBEDC711E0FB4410044BBF6 /* FlowControl.swift in Sources */,
 				6F653B2A1DCAD8F8001328FF /* Trace.swift in Sources */,
+				6F3731F01E371D8000479457 /* HttpHeader.swift in Sources */,
 				6FBEE1111E1608A90044BBF6 /* UnixBridge.cpp in Sources */,
 				6F653CCD1DD2F649001328FF /* Error.swift in Sources */,
 				6FBEDC771E0FCA6F0044BBF6 /* H2ConnectionMgr.swift in Sources */,
@@ -1133,6 +1138,7 @@
 				6FBEDDC61E1512ED0044BBF6 /* HPackTable.swift in Sources */,
 				6FBEDDC71E1512ED0044BBF6 /* StaticTable.swift in Sources */,
 				6FBEDDC81E1512ED0044BBF6 /* HuffmanTable.swift in Sources */,
+				6F3731F11E371D8000479457 /* HttpHeader.swift in Sources */,
 				6FBEDDC91E1512ED0044BBF6 /* H2Frame.swift in Sources */,
 				6FBEDDCA1E1512ED0044BBF6 /* H2Utils.swift in Sources */,
 				6FBEDDCB1E1512ED0044BBF6 /* FrameParser.swift in Sources */,

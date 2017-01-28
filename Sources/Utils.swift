@@ -163,3 +163,9 @@ func hexStringToArray(hexStr: String) -> [UInt8] {
 func <<T: RawRepresentable>(a: T, b: T) -> Bool where T.RawValue: Comparable {
     return a.rawValue < b.rawValue
 }
+
+fileprivate var objectIdSeed = 0
+func generateObjectId() -> Int {
+    objectIdSeed += 1
+    return objectIdSeed
+}

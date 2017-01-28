@@ -65,7 +65,11 @@ public protocol WebSocket {
 
 public class NutilFactory {
     public class func createRequest(version: String) -> HttpRequest? {
-        return Http1xRequest(version: version)
+        if version.caseInsensitiveCompare("HTTP/2.0") == .orderedSame {
+            return Http2Request()
+        } else {
+            return Http1xRequest(version: version)
+        }
     }
     
     public class func createResponse(version: String) -> HttpResponse? {

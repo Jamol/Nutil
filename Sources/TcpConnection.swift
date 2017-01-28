@@ -15,6 +15,7 @@ class TcpConnection
     fileprivate var buffer = [UInt8]()
     fileprivate var initBuffer: [UInt8]?
     var isServer = false
+    var host = ""
     
     init() {
         socket
@@ -24,8 +25,17 @@ class TcpConnection
             .onClose(onClose)
     }
     
+    func setSslFlags(_ flags: UInt32) {
+        socket.setSslFlags(flags)
+    }
+    
+    func sslEnabled() -> Bool {
+        return socket.sslEnabled()
+    }
+    
     func connect(_ addr: String, _ port: Int) -> KMError {
         isServer = false
+        host = addr
         return socket.connect(addr, port)
     }
     
@@ -41,7 +51,7 @@ class TcpConnection
     
     func send(_ str: String) -> Int {
         if !sendBufferEmpty() {
-            if !sendBufferedData() {
+            if sendBufferedData() != .noError {
                 return -1
             }
             if !sendBufferEmpty() {
@@ -52,8 +62,7 @@ class TcpConnection
         let ret = socket.write(str)
         if ret > 0 {
             if ret < wlen {
-                let ptr = UnsafePointer<UInt8>(str)
-                buffer = Array(UnsafeBufferPointer(start: ptr + ret, count: wlen - ret))
+                buffer = Array(UnsafeBufferPointer(start: UnsafePointer<UInt8>(str) + ret, count: wlen - ret))
             }
             return wlen
         }
@@ -62,7 +71,7 @@ class TcpConnection
     
     func send<T>(_ data: [T]) -> Int {
         if !sendBufferEmpty() {
-            if !sendBufferedData() {
+            if sendBufferedData() != .noError {
                 return -1
             }
             if !sendBufferEmpty() {
@@ -85,7 +94,7 @@ class TcpConnection
     
     func send(_ data: UnsafeRawPointer, _ len: Int) -> Int {
         if !sendBufferEmpty() {
-            if !sendBufferedData() {
+            if sendBufferedData() != .noError {
                 return -1
             }
             if !sendBufferEmpty() {
@@ -106,7 +115,7 @@ class TcpConnection
     
     func send(_ iovs: [iovec]) -> Int {
         if !sendBufferEmpty() {
-            if !sendBufferedData() {
+            if sendBufferedData() != .noError {
                 return -1
             }
             if !sendBufferEmpty() {
@@ -161,11 +170,33 @@ class TcpConnection
         return buffer.count == 0
     }
     
-    fileprivate func sendBufferedData() -> Bool {
+    func getBufferedBytes() -> Int {
+        return buffer.count
+    }
+    
+    func appendBufferedData(_ data: [UInt8]) {
+        if buffer.isEmpty {
+            buffer = data
+        } else {
+            buffer.append(contentsOf: data)
+        }
+    }
+    
+    func appendBufferedData(_ data: UnsafeRawPointer, _ len: Int) {
+        let ptr = data.assumingMemoryBound(to: UInt8.self)
+        let buf = Array(UnsafeBufferPointer(start: ptr, count: len))
+        if buffer.isEmpty {
+            buffer = buf
+        } else {
+            buffer.append(contentsOf: buf)
+        }
+    }
+    
+    func sendBufferedData() -> KMError {
         if !buffer.isEmpty {
             let ret = socket.write(buffer)
             if ret < 0 {
-                return false
+                return .sockError
             }
             if ret >= buffer.count {
                 buffer = []
@@ -173,7 +204,7 @@ class TcpConnection
                 buffer = Array(buffer[ret..<buffer.count])
             }
         }
-        return true
+        return .noError
     }
 }
 
@@ -216,7 +247,7 @@ extension TcpConnection
     }
     
     fileprivate func onWrite() {
-        if !sendBufferedData() {
+        if sendBufferedData() != .noError {
             return
         }
         if sendBufferEmpty() {
@@ -227,5 +258,15 @@ extension TcpConnection
     fileprivate func onClose() {
         cleanup()
         handleOnError(err: .sockError)
+    }
+}
+
+extension TcpConnection {
+    func sync(_ block: ((Void) -> Void)) {
+        socket.sync(block)
+    }
+    
+    func async(_ block: @escaping ((Void) -> Void)) {
+        socket.async(block)
     }
 }

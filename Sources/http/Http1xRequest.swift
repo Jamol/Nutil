@@ -154,7 +154,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         if let query = url.query {
             u += "?" + query
         }
-        let req = message.buildMessageHeader(method, u, version)
+        let req = message.buildHeader(method, u, version)
         setState(.sendingHeader)
         let ret = send(req)
         if ret < 0 {
@@ -206,26 +206,26 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     
     override func handleOnError(err: KMError) {
         infoTrace("Http1xRequest.handleOnError, err=\(err)")
-        onError(err: err)
+        onHttpError(err: err)
     }
     
-    func onData(data: UnsafeMutableRawPointer, len: Int) {
+    func onHttpData(data: UnsafeMutableRawPointer, len: Int) {
         //infoTrace("onData, len=\(len), total=\(parser.bodyBytesRead)")
         cbData?(data, len)
     }
     
-    func onHeaderComplete() {
+    func onHttpHeaderComplete() {
         infoTrace("Http1xRequest.onHeaderComplete")
         cbHeader?()
     }
     
-    func onComplete() {
+    func onHttpComplete() {
         infoTrace("Http1xRequest.onResponseComplete, bodyReceived=\(parser.bodyBytesRead)")
         setState(.completed)
         cbComplete?()
     }
     
-    func onError(err: KMError) {
+    func onHttpError(err: KMError) {
         infoTrace("Http1xRequest.onError")
         if state == .receivingResponse && parser.setEOF(){
             return

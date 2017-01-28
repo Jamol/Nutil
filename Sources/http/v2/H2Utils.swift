@@ -8,6 +8,8 @@
 
 import Foundation
 
+typealias KeyValuePair = (name: String, value: String)
+
 func encode_u32(_ dst: UnsafeMutablePointer<UInt8>, _ u32: UInt32) {
     dst[0] = UInt8((u32 >> 24) & 0xFF)
     dst[1] = UInt8((u32 >> 16) & 0xFF)

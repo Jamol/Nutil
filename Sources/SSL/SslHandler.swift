@@ -40,10 +40,9 @@ class SslHandler {
         return sslState
     }
     
-    func setAlpnProtocols(alpn: AlpnProtos) {
-        if (SSL_set_alpn_protos(ssl, alpn, UInt32(alpn.count)) == 1) {
-            return; // success
-        }
+    func setAlpnProtocols(alpn: AlpnProtos) -> Bool {
+        let ret = SSL_set_alpn_protos(ssl, alpn, UInt32(alpn.count))
+        return ret == 0
     }
     
     func getAlpnSelected() -> String? {
@@ -61,10 +60,9 @@ class SslHandler {
         }
     }
     
-    func setServerName(name: String) {
-        if (SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name)) == 1) {
-            return ; // success
-        }
+    func setServerName(name: String) -> Bool {
+        let ret = SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name))
+        return ret == 0
     }
     
     func attachFd(fd: SOCKET_FD, role: SslRole) throws {

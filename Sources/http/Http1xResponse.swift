@@ -54,10 +54,6 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         super.close()
     }
     
-    func setSslFlags(_ flags: UInt32) {
-        super.socket.setSslFlags(flags)
-    }
-    
     override func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
         setState(.receivingRequest)
         return super.attachFd(fd, initData, initSize)
@@ -76,7 +72,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         if state != .waitForResponse {
             return .invalidState
         }
-        let rsp = message.buildMessageHeader(statusCode, desc, version)
+        let rsp = message.buildHeader(statusCode, desc, version)
         setState(.sendingHeader)
         let ret = send(rsp)
         if ret < 0 {
@@ -162,27 +158,27 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
     
     override func handleOnError(err: KMError) {
         infoTrace("Http1xResponse.handleOnError, err=\(err)")
-        onError(err: err)
+        onHttpError(err: err)
     }
     
-    func onData(data: UnsafeMutableRawPointer, len: Int) {
+    func onHttpData(data: UnsafeMutableRawPointer, len: Int) {
         //infoTrace("onData, len=\(len), total=\(parser.bodyBytesRead)")
         cbData?(data, len)
     }
     
-    func onHeaderComplete() {
+    func onHttpHeaderComplete() {
         infoTrace("Http1xResponse.onHeaderComplete, method=\(parser.method), url=\(parser.urlString)")
         cbHeader?()
     }
     
-    func onComplete() {
+    func onHttpComplete() {
         infoTrace("Http1xResponse.onRequestComplete, bodyReceived=\(parser.bodyBytesRead)")
         setState(.waitForResponse)
         cbRequest?()
     }
     
-    func onError(err: KMError) {
-        infoTrace("Http1xResponse.onError")
+    func onHttpError(err: KMError) {
+        infoTrace("Http1xResponse.onHttpError")
         if state < State.completed {
             setState(.error)
             cbError?(err)
