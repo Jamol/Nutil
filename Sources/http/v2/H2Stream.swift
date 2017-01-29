@@ -47,6 +47,7 @@ class H2Stream {
         flowControl.initLocalWindowSize(initLocalWindowSize)
         flowControl.initRemoteWindowSize(initRemoteWindowSize)
         flowControl.setLocalWindowStep(initLocalWindowSize)
+        flowControl.cbUpdate = sendWindowUpdate
     }
     
     fileprivate func setState(_ state: State) {
@@ -132,10 +133,7 @@ class H2Stream {
         guard let c = conn else {
             return .invalidState
         }
-        let frame = WindowUpdateFrame()
-        frame.streamId = getStreamId()
-        frame.windowSizeIncrement = delta
-        return c.sendH2Frame(frame)
+        return c.sendWindowUpdate(getStreamId(), delta: delta)
     }
     
     func close() {

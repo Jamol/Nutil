@@ -241,6 +241,7 @@ extension TcpConnection
                 } else {
                     cleanup()
                     handleOnError(err: .sockError)
+                    break
                 }
             }while(true)
         }

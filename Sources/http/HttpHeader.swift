@@ -33,7 +33,7 @@ class HttpHeader {
         return headers[name] != nil
     }
     
-    fileprivate func processHeader() {
+    func processHeader() {
         var val = headers[kContentLength]
         if let v = val {
             contentLength = Int(v)
@@ -50,6 +50,11 @@ class HttpHeader {
         hasBody_ = isChunked || (contentLength != nil && contentLength! > 0)
     }
     
+    func processHeader(_ statusCode: Int) {
+        hasBody_ = hasBody_ || !((100 <= statusCode && statusCode <= 199) ||
+            204 == statusCode || 304 == statusCode)
+    }
+    
     func buildHeader(_ method: String, _ url: String, _ ver: String) -> String {
         processHeader()
         var req = method + " " + url + " " + ver
@@ -62,7 +67,7 @@ class HttpHeader {
     }
     
     func buildHeader(_ statusCode: Int, _ desc: String, _ ver: String) -> String {
-        processHeader()
+        processHeader(statusCode)
         var rsp = "\(ver) \(statusCode)"
         if (!desc.isEmpty) {
             rsp += " " + desc
@@ -72,8 +77,6 @@ class HttpHeader {
             rsp += kv.key + ": " + kv.value + "\r\n"
         }
         rsp += "\r\n"
-        hasBody_ = hasBody_ || !((100 <= statusCode && statusCode <= 199) ||
-            204 == statusCode || 304 == statusCode)
         return rsp
     }
     

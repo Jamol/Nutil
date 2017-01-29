@@ -63,7 +63,10 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         super.init()
         flowControl.initLocalWindowSize(LOCAL_CONN_INITIAL_WINDOW_SIZE)
         flowControl.setMinLocalWindowSize(initLocalWindowSize);
-        flowControl.setLocalWindowStep(LOCAL_CONN_INITIAL_WINDOW_SIZE);
+        flowControl.setLocalWindowStep(LOCAL_CONN_INITIAL_WINDOW_SIZE)
+        flowControl.cbUpdate = { (delta: UInt32) -> KMError in
+            return self.sendWindowUpdate(0, delta: delta)
+        }
         cmpPreface = kClientConnectionPreface
         httpParser.delegate = self
         frameParser.cbFrame = onFrame
@@ -366,6 +369,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
             return
         }
         if frame.streamId == 0 {
+            infoTrace("handleWindowUpdateFrame, streamId=\(frame.streamId), delta=\(frame.windowSizeIncrement), window=\(flowControl.remoteWindowSize)")
             if frame.windowSizeIncrement == 0 {
                 connectionError(.protocolError)
                 return
@@ -653,11 +657,11 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         }
     }
     
-    func sendWindowUpdate(_ streamId: UInt32, delta: Int) {
+    func sendWindowUpdate(_ streamId: UInt32, delta: UInt32) -> KMError {
         let frame = WindowUpdateFrame()
         frame.streamId = streamId
-        frame.windowSizeIncrement = UInt32(delta)
-        _ = sendH2Frame(frame)
+        frame.windowSizeIncrement = delta
+        return sendH2Frame(frame)
     }
     
     func sendGoaway(_ err: H2Error) {

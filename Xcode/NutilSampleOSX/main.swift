@@ -88,10 +88,12 @@ let ret = ssl.connect("www.google.com", 443)
 #endif
 
 #if true
+    var totalBytesReceived = 0
     let req = NutilFactory.createRequest(version: "HTTP/2.0")!
     req
     .onData { (data: UnsafeMutableRawPointer, len: Int) in
-        print("data received, len=\(len)")
+        totalBytesReceived += len
+        print("data received, len=\(len), total=\(totalBytesReceived)")
     }
     .onHeaderComplete {
         print("header completed")
@@ -101,8 +103,10 @@ let ret = ssl.connect("www.google.com", 443)
     }
     .onError { err in
         print("request error, err=\(err)")
-}
-_ = req.sendRequest("GET", "https://0.0.0.0:8443")
+    }
+    req.addHeader("user-agent", "kuma 1.0")
+    _ = req.sendRequest("GET", "https://0.0.0.0:8443/testdata")
+    //_ = req.sendRequest("GET", "https://www.google.com")
 #endif
 
 RunLoop.main.run()

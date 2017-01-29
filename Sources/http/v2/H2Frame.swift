@@ -644,7 +644,7 @@ class PingFrame : H2Frame {
     
     override func decode(_ hdr: FrameHeader, _ payload: UnsafePointer<UInt8>) -> H2Error {
         setFrameHeader(hdr)
-        if hdr.streamId == 0 {
+        if hdr.streamId != 0 {
             return .protocolError
         }
         if hdr.length != kH2PingPayloadSize {
@@ -693,7 +693,7 @@ class GoawayFrame : H2Frame {
     
     override func decode(_ hdr: FrameHeader, _ payload: UnsafePointer<UInt8>) -> H2Error {
         setFrameHeader(hdr)
-        if hdr.streamId == 0 {
+        if hdr.streamId != 0 {
             return .protocolError
         }
         if hdr.length < 8 {

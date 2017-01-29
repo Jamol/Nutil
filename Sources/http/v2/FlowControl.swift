@@ -63,7 +63,7 @@ class FlowControl {
         return 0
     }
     
-    var cbUpdate: ((UInt32) -> Void)?
+    var cbUpdate: ((UInt32) -> KMError)?
     
     func setLocalWindowStep(_ windowSize: Int) {
         localWindowStep = windowSize

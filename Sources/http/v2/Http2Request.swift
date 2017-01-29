@@ -27,7 +27,7 @@ class Http2Request : HttpHeader, HttpRequest {
     fileprivate var writeBlocked = false
     fileprivate var bodyBytesSent = 0
     
-    fileprivate var dataList: [[UInt8]] = []
+    fileprivate var dataList: [[UInt8]?] = []
     
     fileprivate var statusCode = 0
     fileprivate var rspHeaders: [String: String] = [:]
@@ -128,6 +128,7 @@ class Http2Request : HttpHeader, HttpRequest {
     }
     
     fileprivate func buildHeaders() -> (headers: NameValueArray, size: Int) {
+        processHeader()
         var hdrSize = 0
         var hdrList: [KeyValuePair] = []
         hdrList.append((kH2HeaderMethod, method))
@@ -241,6 +242,22 @@ class Http2Request : HttpHeader, HttpRequest {
         guard let stream = self.stream else {
             return -1
         }
+        if newData && !dataList.isEmpty {
+            if let d = data {
+                let slen = d.count
+                d.withUnsafeBufferPointer {
+                    let ptr = $0.baseAddress!
+                    ptr.withMemoryRebound(to: UInt8.self, capacity: slen) {
+                        let bbuf = UnsafeBufferPointer(start: $0, count: slen)
+                        let dbuf = Array(bbuf)
+                        dataList.append(dbuf)
+                    }
+                }
+            } else {
+                dataList.append(nil)
+            }
+            return 0
+        }
         var ret = 0
         var slen = 0
         if let dbuf = data {
@@ -260,9 +277,9 @@ class Http2Request : HttpHeader, HttpRequest {
             _ = stream.sendData(nil, 0, true);
             setState(.receivingResponse);
         }
-        if newData, ret == 0, let dbuf = data {
+        if newData, ret == 0, let d = data {
             writeBlocked = true
-            dbuf.withUnsafeBufferPointer {
+            d.withUnsafeBufferPointer {
                 let ptr = $0.baseAddress!
                 ptr.withMemoryRebound(to: UInt8.self, capacity: slen) {
                     let bbuf = UnsafeBufferPointer(start: $0, count: slen)
@@ -273,6 +290,23 @@ class Http2Request : HttpHeader, HttpRequest {
             ret = slen
         }
         return ret
+    }
+    
+    fileprivate func sendData_i() -> Int {
+        var bytesSent = 0
+        while !dataList.isEmpty {
+            let ret = sendData_i(dataList[0], false)
+            if (ret > 0) {
+                bytesSent += ret
+                dataList.removeFirst()
+            } else if ret == 0 {
+                break
+            } else {
+                onError(.failed)
+                return -1
+            }
+        }
+        return bytesSent
     }
     
     fileprivate func onHeaders(headers: NameValueArray, endHeaders: Bool, endStream: Bool) {
@@ -310,16 +344,8 @@ class Http2Request : HttpHeader, HttpRequest {
     }
     
     fileprivate func onWrite() {
-        while !dataList.isEmpty {
-            let ret = sendData_i(dataList[0], false)
-            if (ret > 0) {
-                dataList.removeFirst()
-            } else if ret == 0 {
-                return
-            } else {
-                onError(.failed)
-                return
-            }
+        if sendData_i() < 0 || !dataList.isEmpty {
+            return
         }
         writeBlocked = false
         cbSend?()
