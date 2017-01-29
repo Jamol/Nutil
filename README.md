@@ -1,6 +1,5 @@
 # Nutil
 Network protocols implementation in swift
 
-## Implemented: TCP/UDP/HTTP/WebSocket
+## Implemented: TCP/UDP/HTTP/HTTP2/WebSocket
 
-## Next plan: HTTP2
