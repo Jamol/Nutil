@@ -62,7 +62,7 @@ class SslHandler {
     
     func setServerName(name: String) -> Bool {
         let ret = SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name))
-        return ret == 0
+        return ret != 0
     }
     
     func attachFd(fd: SOCKET_FD, role: SslRole) throws {
