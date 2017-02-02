@@ -21,7 +21,7 @@ protocol HttpParserDelegate {
     func onHttpError(err: KMError)
 }
 
-class HttpParser {
+class HttpParser : HttpHeader {
     enum ReadState {
         case line
         case head
@@ -45,11 +45,9 @@ class HttpParser {
     var bodyBytesRead: Int {
         return totalBytesRead
     }
-    fileprivate var contentLength:Int?
     fileprivate var totalBytesRead = 0
     fileprivate var readState = ReadState.line
     
-    fileprivate var isChunked = false
     fileprivate var chunkState = ChunkReadState.size
     fileprivate var chunkSize = 0
     
@@ -67,16 +65,13 @@ class HttpParser {
     var version = "HTTP/1.1"
     var url: URL!
     
-    var headers: [String: String] = [:]
-    
-    func reset() {
+    override func reset() {
+        super.reset()
         readState = .line
         
-        isChunked = false
         chunkState = .size
         chunkSize = 0
         
-        contentLength = nil
         totalBytesRead = 0
         isPaused = false
         isUpgrade = false
@@ -85,8 +80,6 @@ class HttpParser {
         
         statusCode = 0
         urlString = ""
-        
-        headers.removeAll()
     }
     
     func complete() -> Bool {
@@ -103,7 +96,7 @@ class HttpParser {
     
     func resume() {
         isPaused = false
-        if hasBody() && !isUpgrade {
+        if hasBody && !isUpgrade {
             readState = .body
         } else {
             readState = .done
@@ -219,7 +212,7 @@ class HttpParser {
                         if isPaused {
                             return len - remain
                         }
-                        if hasBody() && !isUpgrade {
+                        if hasBody && !isUpgrade {
                             readState = .body
                         } else {
                             readState = .done
@@ -317,7 +310,7 @@ class HttpParser {
         let index = line.index(before: r.upperBound)
         let name = line.substring(to: index).trimmingCharacters(in: .whitespaces)
         let value = line.substring(from: r.upperBound).trimmingCharacters(in: .whitespaces)
-        headers[name] = value
+        super.addHeader(name, value)
         return true
     }
     
@@ -422,21 +415,6 @@ class HttpParser {
         return len
     }
     
-    fileprivate func hasBody() -> Bool {
-        if isChunked {
-            return true
-        }
-        if let contentLength = contentLength {
-            return contentLength > 0
-        }
-        if isRequest {
-            return false
-        } else { // read untill EOF
-            return !((100 <= statusCode && statusCode <= 199) ||
-                204 == statusCode || 304 == statusCode)
-        }
-    }
-    
     fileprivate func readUntillEOF() -> Bool {
         return !isRequest && contentLength == nil && !isChunked &&
             !((100 <= statusCode && statusCode <= 199) ||
@@ -453,12 +431,15 @@ class HttpParser {
     }
     
     fileprivate func onHeaderComplete() {
-        if let str = headers[kContentLength] {
-            contentLength = Int(str)
-            infoTrace("HttpParser, contentLength=\(contentLength)")
+        if isRequest {
+            processHeader()
+        } else {
+            processHeader(statusCode)
         }
-        if let str = headers[kTransferEncoding] {
-            isChunked = str == "chunked"
+        if let clen = contentLength {
+            infoTrace("HttpParser, contentLength=\(clen)")
+        }
+        if isChunked {
             infoTrace("HttpParser, isChunked=\(isChunked)")
         }
         if headers[kUpgrade] != nil {

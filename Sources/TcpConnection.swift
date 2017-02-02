@@ -206,6 +206,11 @@ class TcpConnection
         }
         return .noError
     }
+    
+    func reset() {
+        buffer = []
+        initBuffer = nil
+    }
 }
 
 extension TcpConnection

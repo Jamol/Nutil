@@ -107,7 +107,8 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
     }
     
-    func reset() {
+    override func reset() {
+        super.reset()
         parser.reset()
         message.reset()
         setState(.idle)

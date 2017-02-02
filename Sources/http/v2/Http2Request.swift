@@ -51,7 +51,8 @@ class Http2Request : HttpHeader, HttpRequest {
     override func addHeader(_ name: String, _ value: String) {
         if name.caseInsensitiveCompare(kTransferEncoding) == .orderedSame
             && value.caseInsensitiveCompare("chunked") == .orderedSame {
-            return;
+            isChunked = true
+            return
         }
         super.addHeader(name, value)
     }
@@ -180,10 +181,10 @@ class Http2Request : HttpHeader, HttpRequest {
         let ret = stream.sendHeaders(hdrInfo.headers, hdrInfo.size, endStream)
         if ret == .noError {
             if (endStream) {
-                setState(.receivingResponse);
+                setState(.receivingResponse)
             } else {
-                setState(.sendingBody);
-                onWrite(); // should queue in event loop rather than call onWrite directly?
+                setState(.sendingBody)
+                onWrite() // should queue in event loop rather than call onWrite directly?
             }
         }
         return ret
@@ -269,13 +270,13 @@ class Http2Request : HttpHeader, HttpRequest {
             }
             ret = stream.sendData(dbuf, slen, false);
             if (ret > 0) {
-                bodyBytesSent += ret;
+                bodyBytesSent += ret
             }
         }
         let endStream = (data == nil) || (contentLength != nil && bodyBytesSent >= contentLength!)
         if endStream {
-            _ = stream.sendData(nil, 0, true);
-            setState(.receivingResponse);
+            _ = stream.sendData(nil, 0, true)
+            setState(.receivingResponse)
         }
         if newData, ret == 0, let d = data {
             writeBlocked = true

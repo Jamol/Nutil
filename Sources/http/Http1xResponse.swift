@@ -117,7 +117,8 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
     }
     
-    func reset() {
+    override func reset() {
+        super.reset()
         parser.reset()
         message.reset()
         setState(.receivingRequest)
