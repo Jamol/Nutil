@@ -32,15 +32,15 @@ public protocol HttpResponse {
     func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError
     func addHeader(_ name: String, _ value: String)
     func addHeader(_ name: String, _ value: Int)
-    func sendResponse(_ statusCode: Int, _ desc: String) -> KMError
+    func sendResponse(_ statusCode: Int, _ desc: String?) -> KMError
     func sendData(_ data: UnsafeRawPointer?, _ len: Int) -> Int
     func sendString(_ str: String) -> Int
     func reset()
     func close()
     
     func getMethod() -> String
-    func getUrl() -> String
     func getPath() -> String
+    func getVersion() -> String
     func getHeader(_ name: String) -> String?
     func getParam(_ name: String) -> String?
     
@@ -73,7 +73,11 @@ public class NutilFactory {
     }
     
     public class func createResponse(version: String) -> HttpResponse? {
-        return Http1xResponse(version: version)
+        if version.caseInsensitiveCompare("HTTP/2.0") == .orderedSame {
+            return Http2Response()
+        } else {
+            return Http1xResponse(version: version)
+        }
     }
     
     public class func createWebSocket() -> WebSocket {

@@ -66,10 +66,10 @@ class HttpHeader {
         return req
     }
     
-    func buildHeader(_ statusCode: Int, _ desc: String, _ ver: String) -> String {
+    func buildHeader(_ statusCode: Int, _ desc: String?, _ ver: String) -> String {
         processHeader(statusCode)
         var rsp = "\(ver) \(statusCode)"
-        if (!desc.isEmpty) {
+        if let desc = desc, !desc.isEmpty {
             rsp += " " + desc
         }
         rsp += "\r\n"

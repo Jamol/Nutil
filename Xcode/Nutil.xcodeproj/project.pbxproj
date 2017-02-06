@@ -12,7 +12,7 @@
 		6F653AF61DCAD6FD001328FF /* Nutil.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F653AEC1DCAD6FD001328FF /* Nutil.framework */; };
 		6F653AFB1DCAD6FD001328FF /* NutilOSXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F653AFA1DCAD6FD001328FF /* NutilOSXTests.swift */; };
 		6F653AFD1DCAD6FE001328FF /* NutilOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F653AEF1DCAD6FD001328FF /* NutilOSX.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		6F653B121DCAD741001328FF /* NutiliOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F653B091DCAD741001328FF /* NutiliOS.framework */; };
+		6F653B121DCAD741001328FF /* Nutil.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F653B091DCAD741001328FF /* Nutil.framework */; };
 		6F653B171DCAD741001328FF /* NutiliOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F653B161DCAD741001328FF /* NutiliOSTests.swift */; };
 		6F653B191DCAD741001328FF /* NutiliOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F653B0B1DCAD741001328FF /* NutiliOS.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		6F653B271DCAD8F8001328FF /* Acceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F653B211DCAD8F8001328FF /* Acceptor.swift */; };
@@ -287,7 +287,7 @@
 		6F653AF51DCAD6FD001328FF /* NutilOSXTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NutilOSXTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F653AFA1DCAD6FD001328FF /* NutilOSXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutilOSXTests.swift; sourceTree = "<group>"; };
 		6F653AFC1DCAD6FE001328FF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		6F653B091DCAD741001328FF /* NutiliOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = NutiliOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F653B091DCAD741001328FF /* Nutil.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Nutil.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F653B0B1DCAD741001328FF /* NutiliOS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NutiliOS.h; sourceTree = "<group>"; };
 		6F653B0C1DCAD741001328FF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6F653B111DCAD741001328FF /* NutiliOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NutiliOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -325,8 +325,6 @@
 		6FBEDC7F1E0FCBAD0044BBF6 /* HPackTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPackTable.swift; sourceTree = "<group>"; };
 		6FBEDC811E0FCBC00044BBF6 /* StaticTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StaticTable.swift; sourceTree = "<group>"; };
 		6FBEDC831E0FCBF80044BBF6 /* HuffmanTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HuffmanTable.swift; sourceTree = "<group>"; };
-		6FBEDDF21E15F8470044BBF6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = "../External/openssl/lib/ios/Debug-iphonesimulator/libcrypto.a"; sourceTree = "<group>"; };
-		6FBEDDF31E15F8470044BBF6 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = "../External/openssl/lib/ios/Debug-iphonesimulator/libssl.a"; sourceTree = "<group>"; };
 		6FBEE0151E1607F10044BBF6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../External/openssl/lib/ios/libcrypto.a; sourceTree = "<group>"; };
 		6FBEE0161E1607F10044BBF6 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = ../External/openssl/lib/ios/libssl.a; sourceTree = "<group>"; };
 		6FBEE01C1E1608A80044BBF6 /* aes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
@@ -446,7 +444,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6F653B121DCAD741001328FF /* NutiliOS.framework in Frameworks */,
+				6F653B121DCAD741001328FF /* Nutil.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -480,7 +478,7 @@
 			children = (
 				6F653AEC1DCAD6FD001328FF /* Nutil.framework */,
 				6F653AF51DCAD6FD001328FF /* NutilOSXTests.xctest */,
-				6F653B091DCAD741001328FF /* NutiliOS.framework */,
+				6F653B091DCAD741001328FF /* Nutil.framework */,
 				6F653B111DCAD741001328FF /* NutiliOSTests.xctest */,
 				6F653B311DCAD99B001328FF /* NutilSampleOSX */,
 			);
@@ -558,8 +556,6 @@
 			children = (
 				6FBEE0151E1607F10044BBF6 /* libcrypto.a */,
 				6FBEE0161E1607F10044BBF6 /* libssl.a */,
-				6FBEDDF21E15F8470044BBF6 /* libcrypto.a */,
-				6FBEDDF31E15F8470044BBF6 /* libssl.a */,
 				6F653BA61DCCD5B2001328FF /* libcrypto.a */,
 				6F653BA71DCCD5B2001328FF /* libssl.a */,
 			);
@@ -954,7 +950,7 @@
 			);
 			name = NutiliOS;
 			productName = NutiliOS;
-			productReference = 6F653B091DCAD741001328FF /* NutiliOS.framework */;
+			productReference = 6F653B091DCAD741001328FF /* Nutil.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 		6F653B101DCAD741001328FF /* NutiliOSTests */ = {
@@ -1223,7 +1219,7 @@
 		6F653AFF1DCAD6FE001328FF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -1294,7 +1290,7 @@
 		6F653B001DCAD6FE001328FF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -1513,7 +1509,7 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = Nutil.NutiliOS;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Nutil;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -1575,7 +1571,7 @@
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../External/openssl/lib/ios";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = Nutil.NutiliOS;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Nutil;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/../External/openssl";

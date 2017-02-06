@@ -11,13 +11,14 @@ import Foundation
 
 let kColon = UInt8(ascii: ":")
 
-class Http2Response : HttpHeader {
+class Http2Response : HttpHeader, HttpResponse {
     fileprivate var stream: H2Stream?
     
     fileprivate var bodyBytesSent = 0
     fileprivate var reqHeaders: [String: String] = [:]
     fileprivate var reqMethod = ""
     fileprivate var reqPath = ""
+    fileprivate var version = "HTTP/2.0"
     
     fileprivate var cbData: DataCallback?
     fileprivate var cbHeader: EventCallback?
@@ -49,6 +50,14 @@ class Http2Response : HttpHeader {
         }
     }
     
+    func setSslFlags(_ flags: UInt32) {
+        
+    }
+    
+    func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
+        return .unsupport
+    }
+    
     func attachStream(_ conn: H2Connection, _ streamId: UInt32) -> KMError {
         stream = conn.getStream(streamId)
         if stream == nil {
@@ -71,7 +80,7 @@ class Http2Response : HttpHeader {
         super.addHeader(name, value)
     }
     
-    func sendResponse(statusCode: Int, desc: String?, ver: String) -> KMError {
+    func sendResponse(_ statusCode: Int, _ desc: String?) -> KMError {
         infoTrace("sendResponse, statusCode=\(statusCode)")
         guard let stream = self.stream else {
             return .invalidState
@@ -119,6 +128,10 @@ class Http2Response : HttpHeader {
             notifyComplete()
         }
         return ret
+    }
+    
+    func sendString(_ str: String) -> Int {
+        return sendData(UnsafePointer<UInt8>(str), str.utf8.count)
     }
     
     fileprivate func checkHeaders() {
@@ -196,6 +209,10 @@ class Http2Response : HttpHeader {
         cbComplete?()
     }
     
+    override func reset() {
+        super.reset()
+    }
+    
     func close() {
         infoTrace("Http2Response.close")
         cleanup()
@@ -232,5 +249,25 @@ extension Http2Response {
     @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self {
         cbSend = cb
         return self
+    }
+    
+    func getMethod() -> String {
+        return reqMethod
+    }
+    
+    func getPath() -> String {
+        return reqPath
+    }
+    
+    func getVersion() -> String {
+        return version
+    }
+    
+    func getHeader(_ name: String) -> String? {
+        return reqHeaders[name]
+    }
+    
+    func getParam(_ name: String) -> String? {
+        return nil
     }
 }

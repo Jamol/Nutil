@@ -66,11 +66,17 @@ func createSslContext(_ caFile: String, _ certFile: String, _ keyFile: String, _
         if (SSL_CTX_set_ecdh_auto(ctx, 1) != 1) {
             warnTrace("SSL_CTX_set_ecdh_auto failed, err=\(ERR_reason_error_string(ERR_get_error()))");
         }
+#if arch(arm)
+        var flags = UInt(SSL_OP_ALL) | UInt(SSL_OP_NO_SSLv2) | UInt(SSL_OP_NO_SSLv3) | UInt(SSL_OP_NO_TLSv1) | UInt(SSL_OP_NO_TLSv1_1)
+        flags |= UInt(SSL_OP_NO_COMPRESSION)
+        _ = SSL_CTX_set_options(ctx, Int(bitPattern: flags))
+#else
         var flags = SSL_OP_ALL | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1
         flags |= SSL_OP_NO_COMPRESSION
         //let flags = UInt32(SSL_OP_ALL) | UInt32(SSL_OP_NO_COMPRESSION)
         // SSL_OP_SAFARI_ECDHE_ECDSA_BUG
         _ = SSL_CTX_set_options(ctx, flags)
+#endif
         //SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)
         _ = SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER)
         _ = SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE)

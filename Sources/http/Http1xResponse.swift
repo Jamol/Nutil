@@ -67,7 +67,7 @@ class Http1xResponse : TcpConnection, HttpResponse, HttpParserDelegate, MessageS
         message.addHeader(name, value)
     }
     
-    func sendResponse(_ statusCode: Int, _ desc: String) -> KMError {
+    func sendResponse(_ statusCode: Int, _ desc: String?) -> KMError {
         infoTrace("Http1xResponse.sendResponse, status=\(statusCode), state=\(state)")
         if state != .waitForResponse {
             return .invalidState
@@ -224,12 +224,12 @@ extension Http1xResponse {
         return parser.method
     }
     
-    func getUrl() -> String {
-        return parser.urlString
-    }
-    
     func getPath() -> String {
         return parser.url.path
+    }
+    
+    func getVersion() -> String {
+        return parser.version
     }
     
     func getHeader(_ name: String) -> String? {

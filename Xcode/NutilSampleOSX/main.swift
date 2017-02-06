@@ -105,7 +105,8 @@ let ret = ssl.connect("www.google.com", 443)
         print("request error, err=\(err)")
     }
     req.addHeader("user-agent", "kuma 1.0")
-    _ = req.sendRequest("GET", "https://0.0.0.0:8443/testdata")
+    //_ = req.sendRequest("GET", "https://127.0.0.1:8443/testdata")
+    _ = req.sendRequest("GET", "http://173.39.168.25:8443/testdata")
     //_ = req.sendRequest("GET", "https://www.google.com")
 #endif
 
