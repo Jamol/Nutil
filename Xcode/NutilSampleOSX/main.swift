@@ -74,8 +74,9 @@ let ret = ssl.connect("www.google.com", 443)
 
 #if false
     let ws = NutilFactory.createWebSocket()
-    ws.onData { (data, len) in
-        print("WebSocket.onData, len=\(len)")
+    ws.onData { (data, len, fin) in
+        print("WebSocket.onData, len=\(len), fin=\(fin)")
+        ws.close()
     }
     .onError { err in
         print("WebSocket.onError, err=\(err)")
@@ -83,7 +84,7 @@ let ret = ssl.connect("www.google.com", 443)
     let ret = ws.connect("wss://127.0.0.1:8443") { err in
         print("WebSocket.onConnect, err=\(err)")
         let buf = Array<UInt8>(repeating: 64, count: 16*1024)
-        let ret = ws.sendData(buf, buf.count)
+        let ret = ws.sendData(buf, buf.count, false, true)
     }
 #endif
 

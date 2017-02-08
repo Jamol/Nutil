@@ -8,7 +8,9 @@
 
 import Foundation
 
-let kMaxFrameDataLength = 10*1024*1024
+let kWSMaxPayloadSize = 10*1024*1024
+let kWSMaskKeySize = 4
+let kWSMaxHeaderSize = 14
 
 enum WSError {
     case noErr
@@ -18,18 +20,26 @@ enum WSError {
     case invalidState
     case invalidFrame
     case invalidLength
+    case protocolError
     case closed
 }
 
+enum WSOpcode : UInt8 {
+    case _continue_ = 0
+    case text   = 1
+    case binary = 2
+    case close  = 8
+    case ping   = 9
+    case pong   = 10
+}
+
+enum WSMode {
+    case client, server
+}
+
+typealias WSFrameCallback = (WSOpcode, Bool, UnsafeMutableRawPointer?, Int) -> Void
+
 class WSHandler : HttpParserDelegate {
-    enum WSOpcode: UInt8 {
-        case _continue_ = 0
-        case text   = 1
-        case binary = 2
-        case closed = 8
-        case ping   = 9
-        case pong   = 10
-    }
     
     enum DecodeState {
         case hdr1
@@ -80,19 +90,16 @@ class WSHandler : HttpParserDelegate {
     
     fileprivate var state = State.handshake
     fileprivate var dctx = DecodeContext()
-    fileprivate var opcode: UInt8 = WSOpcode.binary.rawValue
     
     fileprivate var parser = HttpParser()
     
-    fileprivate var cbData: DataCallback?
+    fileprivate var cbFrame: WSFrameCallback?
     fileprivate var cbHandshake: ErrorCallback?
+    
+    var mode = WSMode.client
     
     init() {
         parser.delegate = self
-    }
-    
-    func getOpcode() -> UInt8 {
-        return opcode
     }
     
     func buildUpgradeRequest(_ url: String, _ host: String, _ proto: String, _ origin: String) -> String {
@@ -178,35 +185,45 @@ class WSHandler : HttpParserDelegate {
         return .noErr
     }
     
-    func encodeFrameheader(_ opcode: WSOpcode, _ frameSize: Int, _ hdrBuffer: UnsafeMutablePointer<UInt8>) -> Int {
-        let firstByte: UInt8 = UInt8(0x80) | opcode.rawValue
+    func encodeFrameHeader(_ opcode: WSOpcode, _ fin: Bool, _ mkey: [UInt8]?, _ plen: Int, _ hdrBuffer: UnsafeMutablePointer<UInt8>) -> Int {
+        var firstByte: UInt8 = opcode.rawValue
+        if fin {
+            firstByte |= 0x80
+        }
         var secondByte: UInt8 = 0
-        var hdrSize: UInt8 = 2
-        if frameSize <= 125 {
-            secondByte = UInt8(frameSize)
-        } else if frameSize <= 0xFFFF {
+        if mkey != nil {
+            secondByte = 0x80
+        }
+        var hdrSize = 2
+        if plen <= 125 {
+            secondByte |= UInt8(plen)
+        } else if plen <= 0xFFFF {
             hdrSize += 2
-            secondByte = 126
+            secondByte |= 126
         } else {
             hdrSize += 8
-            secondByte = 127
+            secondByte |= 127
         }
         hdrBuffer[0] = firstByte
         hdrBuffer[1] = secondByte
-        if secondByte == 126 {
-            hdrBuffer[2] = UInt8((frameSize >> 8) & 0xFF)
-            hdrBuffer[3] = UInt8(frameSize & 0xFF)
-        } else if secondByte == 127 {
+        if (secondByte & 0x7F) == 126 {
+            hdrBuffer[2] = UInt8((plen >> 8) & 0xFF)
+            hdrBuffer[3] = UInt8(plen & 0xFF)
+        } else if (secondByte & 0x7F) == 127 {
             hdrBuffer[2] = 0
             hdrBuffer[3] = 0
             hdrBuffer[4] = 0
             hdrBuffer[5] = 0
-            hdrBuffer[6] = UInt8((frameSize >> 24) & 0xFF)
-            hdrBuffer[7] = UInt8((frameSize >> 16) & 0xFF)
-            hdrBuffer[8] = UInt8((frameSize >> 8) & 0xFF)
-            hdrBuffer[9] = UInt8(frameSize & 0xFF)
+            hdrBuffer[6] = UInt8((plen >> 24) & 0xFF)
+            hdrBuffer[7] = UInt8((plen >> 16) & 0xFF)
+            hdrBuffer[8] = UInt8((plen >> 8) & 0xFF)
+            hdrBuffer[9] = UInt8(plen & 0xFF)
         }
-        return Int(hdrSize)
+        if let mkey = mkey {
+            memcpy(hdrBuffer + Int(hdrSize), mkey, kWSMaskKeySize)
+            hdrSize += kWSMaskKeySize
+        }
+        return hdrSize
     }
     
     func decodeFrame(_ data: UnsafeMutablePointer<UInt8>, _ len: Int) -> WSError {
@@ -223,7 +240,12 @@ class WSHandler : HttpParserDelegate {
                     dctx.state = .error
                     return .invalidFrame
                 }
-                opcode = dctx.hdr.opcode
+                if !dctx.hdr.fin && isControlFrame(dctx.hdr.opcode) {
+                    // Control frames MUST NOT be fragmented
+                    dctx.state = .error
+                    return .protocolError
+                }
+                // TODO: check interleaved fragments of different messages
                 dctx.state = .hdr2
             case .hdr2:
                 b = data[pos]
@@ -233,6 +255,11 @@ class WSHandler : HttpParserDelegate {
                 dctx.hdr.xpl = 0
                 dctx.pos = 0
                 dctx.buf = []
+                if isControlFrame(dctx.hdr.opcode) && dctx.hdr.plen > 125 {
+                    // the payload length of control frames MUST <= 125
+                    dctx.state = .error
+                    return .protocolError
+                }
                 dctx.state = .hdrex
             case .hdrex:
                 var expectLen = 0
@@ -254,7 +281,7 @@ class WSHandler : HttpParserDelegate {
                             return WSError.invalidLength
                         }
                         dctx.hdr.length = Int(dctx.hdr.xpl)
-                        if dctx.hdr.length > kMaxFrameDataLength {
+                        if dctx.hdr.length > kWSMaxPayloadSize {
                             dctx.state = .error
                             return WSError.invalidLength
                         }
@@ -273,6 +300,11 @@ class WSHandler : HttpParserDelegate {
                 }
             case .maskey:
                 if dctx.hdr.mask {
+                    if mode == .client {
+                        // server MUST NOT mask any frames
+                        dctx.state = .error
+                        return .protocolError
+                    }
                     let expectLen = 4
                     var copyLen = len - pos
                     if copyLen+dctx.pos > expectLen {
@@ -287,45 +319,44 @@ class WSHandler : HttpParserDelegate {
                         return WSError.incomplete
                     }
                     dctx.pos = 0
+                } else if mode == .server && dctx.hdr.length > 0 {
+                    // client MUST mask all frames
+                    dctx.state = .error
+                    return .protocolError
                 }
                 dctx.buf = []
                 dctx.state = .data
-                if dctx.hdr.opcode == WSOpcode.closed.rawValue && dctx.hdr.length == 0 {
-                    // connection closed
-                    dctx.state = .closed
-                    return WSError.closed
-                }
             case .data:
-                if dctx.hdr.opcode == WSOpcode.closed.rawValue {
-                    // connection closed
-                    dctx.state = .closed
-                    return WSError.closed
-                }
                 let remain = len-pos
-                if dctx.buf.count == 0 && remain >= dctx.hdr.length {
+                if remain+dctx.buf.count < dctx.hdr.length {
+                    let copyLen = len - pos
+                    let bbuf = UnsafeMutableBufferPointer(start: data+pos, count: copyLen)
+                    dctx.buf.append(contentsOf: bbuf)
+                    return WSError.incomplete
+                }
+                
+                if dctx.buf.count == 0 {
                     let notifyData = data + pos
                     let notifySize = dctx.hdr.length
                     pos += notifySize
-                    handleDataMask(dctx.hdr, notifyData, notifySize)
-                    cbData?(notifyData, notifySize)
-                    dctx.reset()
-                } else if remain+dctx.buf.count >= dctx.hdr.length {
+                    handleDataMaskHdr(dctx.hdr, notifyData, notifySize)
+                    _ = handleFrame(dctx.hdr, notifyData, notifySize)
+                } else {
                     let copyLen = dctx.hdr.length - dctx.buf.count
                     let bbuf = UnsafeMutableBufferPointer(start: data+pos, count: copyLen)
                     dctx.buf.append(contentsOf: bbuf)
                     pos += copyLen
                     dctx.buf.withUnsafeMutableBufferPointer {
                         let ptr = $0.baseAddress
-                        handleDataMask(dctx.hdr, ptr!, dctx.hdr.length)
-                        cbData?(ptr!, dctx.hdr.length)
+                        handleDataMaskHdr(dctx.hdr, ptr!, dctx.hdr.length)
+                        _ = handleFrame(dctx.hdr, ptr!, dctx.hdr.length)
                     }
-                    dctx.reset()
-                } else {
-                    let copyLen = len - pos
-                    let bbuf = UnsafeMutableBufferPointer(start: data+pos, count: copyLen)
-                    dctx.buf.append(contentsOf: bbuf)
-                    return WSError.incomplete
                 }
+                if dctx.hdr.opcode == WSOpcode.close.rawValue {
+                    dctx.state = .closed
+                    return WSError.closed
+                }
+                dctx.reset()
             default:
                 return WSError.invalidFrame
             }
@@ -333,13 +364,16 @@ class WSHandler : HttpParserDelegate {
         return dctx.state == .hdr1 ? .noErr : .incomplete
     }
     
-    func handleDataMask(_ hdr: FrameHeader, _ data: UnsafeMutablePointer<UInt8>, _ len: Int) {
+    func handleDataMaskHdr(_ hdr: FrameHeader, _ data: UnsafeMutablePointer<UInt8>, _ len: Int) {
         if !hdr.mask || len == 0 {
             return
         }
-        for i in 0..<len {
-            data[i] ^= hdr.maskey[i%4]
-        }
+        handleDataMask(hdr.maskey, data, len)
+    }
+    
+    func handleFrame(_ hdr: FrameHeader, _ payload: UnsafeMutablePointer<UInt8>?, _ plen: Int) -> WSError {
+        cbFrame?(WSOpcode(rawValue: hdr.opcode)!, hdr.fin, payload, plen)
+        return .noErr
     }
     
     func onHttpData(data: UnsafeMutableRawPointer, len: Int) {
@@ -364,13 +398,23 @@ class WSHandler : HttpParserDelegate {
 }
 
 extension WSHandler {
-    @discardableResult func onData(cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
-        cbData = cb
+    @discardableResult func onFrame(cb: @escaping WSFrameCallback) -> Self {
+        cbFrame = cb
         return self
     }
     
     @discardableResult func onHandshake(cb: @escaping (KMError) -> Void) -> Self {
         cbHandshake = cb
         return self
+    }
+}
+
+func isControlFrame(_ opcode: UInt8) -> Bool {
+    return opcode == WSOpcode.close.rawValue || opcode == WSOpcode.ping.rawValue || opcode == WSOpcode.pong.rawValue
+}
+
+func handleDataMask(_ mkey: [UInt8], _ data: UnsafeMutablePointer<UInt8>, _ len: Int) {
+    for i in 0..<len {
+        data[i] ^= mkey[i%kWSMaskKeySize]
     }
 }

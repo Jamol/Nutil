@@ -8,10 +8,10 @@
 
 import Foundation
 
-let kMaxWsHeaderSize = 10
+typealias WSDataCallback = (UnsafeMutableRawPointer?, Int, Bool) -> Void
 class WebSocketImpl : TcpConnection, WebSocket {
     fileprivate var handler = WSHandler()
-    fileprivate var hdrBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: kMaxWsHeaderSize)
+    fileprivate var hdrBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: kWSMaxHeaderSize)
     
     enum State {
         case idle
@@ -27,8 +27,9 @@ class WebSocketImpl : TcpConnection, WebSocket {
     fileprivate var origin = ""
     
     fileprivate var bytesSent = 0
+    fileprivate var fragmented = false
     
-    fileprivate var cbData: DataCallback?
+    fileprivate var cbData: WSDataCallback?
     fileprivate var cbConnect: ErrorCallback?
     fileprivate var cbError: ErrorCallback?
     fileprivate var cbSend: EventCallback?
@@ -36,12 +37,12 @@ class WebSocketImpl : TcpConnection, WebSocket {
     override init() {
         super.init()
         handler
-            .onData(cb: self.onWsData)
+            .onFrame(cb: self.onWsFrame)
             .onHandshake(cb: self.onWsHandshake)
     }
     
     deinit {
-        hdrBuffer.deallocate(capacity: kMaxWsHeaderSize)
+        hdrBuffer.deallocate(capacity: kWSMaxHeaderSize)
     }
     
     fileprivate func cleanup() {
@@ -85,36 +86,48 @@ class WebSocketImpl : TcpConnection, WebSocket {
         
         super.socket.setSslFlags(sslFlags)
         cbConnect = cb
+        handler.mode = .client
         setState(.connecting)
         return connect(host, port)
     }
     
     override func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError {
+        handler.mode = .server
         setState(.upgrading)
         return super.attachFd(fd, initData, initSize)
     }
     
-    func sendData(_ data: UnsafeRawPointer, _ len: Int) -> Int {
+    func sendData(_ data: UnsafeRawPointer, _ len: Int, _ isText: Bool, _ fin: Bool) -> Int {
         if state != .open {
             return -1
         }
         if !sendBufferEmpty() {
             return 0
         }
-        var opcode = WSHandler.WSOpcode.binary
-        if handler.getOpcode() == WSHandler.WSOpcode.text.rawValue {
-            opcode = WSHandler.WSOpcode.text
+        var opcode = WSOpcode.binary
+        if isText {
+            opcode = .text
         }
-        let hdrSize = handler.encodeFrameheader(opcode, len, hdrBuffer)
-        let iovs: [iovec] = [
-            iovec(iov_base: hdrBuffer, iov_len: hdrSize),
-            iovec(iov_base: UnsafeMutableRawPointer(mutating: data), iov_len: len)
-        ]
-        let ret = super.send(iovs)
-        return ret < 0 ? ret : len
+        if fin {
+            if fragmented {
+                fragmented = false
+                opcode = ._continue_
+            }
+        } else {
+            if fragmented {
+                opcode = ._continue_
+            }
+            fragmented = true
+        }
+        let payload = UnsafeMutableRawPointer(mutating: data)
+        let ret = sendWsFrame(opcode, fin, payload, len)
+        return ret == .noError ? len : -1
     }
     
     override func close() {
+        if state == .open {
+            _ = sendCloseFrame(1000)
+        }
         cleanup()
         setState(.closed)
     }
@@ -190,8 +203,27 @@ class WebSocketImpl : TcpConnection, WebSocket {
         }
     }
     
-    fileprivate func onWsData(_ data: UnsafeMutableRawPointer, _ len: Int) {
-        cbData?(data, len)
+    fileprivate func onWsFrame(_ opcode: WSOpcode, _ fin:Bool, _ payload: UnsafeMutableRawPointer?, _ plen: Int) {
+        if isControlFrame(opcode.rawValue) {
+            if opcode == .close {
+                var statusCode: UInt16 = 0
+                if plen >= 2 {
+                    let ptr = payload!.assumingMemoryBound(to: UInt8.self)
+                    statusCode = decode_u16(ptr)
+                    infoTrace("WebSocket.onWsFrame, close-frame, statusCode=\(statusCode), plen=\(plen)")
+                } else {
+                    infoTrace("WebSocket.onWsFrame, close-frame received")
+                }
+                _ = sendCloseFrame(statusCode)
+                cleanup()
+                setState(.error)
+                cbError?(.failed)
+            } else if opcode == .ping {
+                _ = sendPongFrame(payload, plen)
+            }
+        } else {
+            cbData?(payload, plen, fin)
+        }
     }
     
     fileprivate func onWsHandshake(_ err: KMError) {
@@ -206,10 +238,52 @@ class WebSocketImpl : TcpConnection, WebSocket {
             cbError?(.invalidProto)
         }
     }
+    
+    func sendWsFrame(_ opcode: WSOpcode, _ fin: Bool, _ payload: UnsafeMutableRawPointer?, _ plen: Int) -> KMError {
+        var hdrSize = 0;
+        if handler.mode == .client && plen > 0 {
+            var mkey = [UInt8](repeating: 0, count: kWSMaskKeySize)
+            _ = generateRandomBytes(&mkey, mkey.count)
+            let ptr = payload!.assumingMemoryBound(to: UInt8.self)
+            handleDataMask(mkey, ptr, plen)
+            hdrSize = handler.encodeFrameHeader(opcode, fin, mkey, plen, hdrBuffer)
+        } else {
+            hdrSize = handler.encodeFrameHeader(opcode, fin, nil, plen, hdrBuffer)
+        }
+        var iovs: [iovec] = [
+            iovec(iov_base: hdrBuffer, iov_len: hdrSize)
+        ]
+        if plen > 0 {
+            iovs.append(iovec(iov_base: payload, iov_len: plen))
+        }
+        let ret = super.send(iovs)
+        if ret < 0 {
+            return .sockError
+        }
+        return .noError
+    }
+    
+    func sendCloseFrame(_ statusCode: UInt16) -> KMError {
+        if statusCode != 0 {
+            var payload = [UInt8](repeating: 0, count: 2)
+            encode_u16(&payload, statusCode)
+            return sendWsFrame(.close, true, &payload, 2)
+        } else {
+            return sendWsFrame(.close, true, nil, 0)
+        }
+    }
+    
+    func sendPingFrame(_ payload: UnsafeMutableRawPointer?, _ plen: Int) -> KMError {
+        return sendWsFrame(.ping, true, payload, plen)
+    }
+    
+    func sendPongFrame(_ payload: UnsafeMutableRawPointer?, _ plen: Int) -> KMError {
+        return sendWsFrame(.pong, true, payload, plen)
+    }
 }
 
 extension WebSocketImpl {
-    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self {
+    @discardableResult func onData(_ cb: @escaping WSDataCallback) -> Self {
         cbData = cb
         return self
     }

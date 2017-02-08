@@ -170,6 +170,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         let frameSize = payloadSize + kH2FrameHeaderSize
         
         var buf = Array<UInt8>(repeating: 0, count: frameSize)
+        //let ret = frame.encode(&buf, frameSize)
         let ret = buf.withUnsafeMutableBufferPointer {
             return frame.encode($0.baseAddress!, frameSize)
         }
@@ -572,6 +573,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         let psize = 2 * kH2SettingItemSize
         var pbuff = Array<UInt8>(repeating: 0, count: psize)
         let settingsFrame = SettingsFrame()
+        //_ = settingsFrame.encodePayload(&pbuff, psize, params)
         _ = pbuff.withUnsafeMutableBufferPointer {
             return settingsFrame.encodePayload($0.baseAddress!, psize, params)
         }
@@ -630,6 +632,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         settingsFrame.streamId = 0
         settingsFrame.params = params
         var buf = Array<UInt8>(repeating: 0, count: settingsSize)
+        //var ret = settingsFrame.encode(&buf, settingsSize)
         var ret = buf.withUnsafeMutableBufferPointer {
             return settingsFrame.encode($0.baseAddress!, settingsSize)
         }

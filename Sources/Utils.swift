@@ -159,13 +159,23 @@ func hexStringToArray(hexStr: String) -> [UInt8] {
     return rbuf
 }
 
+func generateRandomBytes(_ buf: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {
+    if SecRandomCopyBytes(kSecRandomDefault, len, buf) == -1 {
+        return 0
+    }
+    return len
+}
+
 // func < for enums
 func <<T: RawRepresentable>(a: T, b: T) -> Bool where T.RawValue: Comparable {
     return a.rawValue < b.rawValue
 }
 
 fileprivate var objectIdSeed = 0
+fileprivate let objectIdMutex = Mutex()
 func generateObjectId() -> Int {
+    objectIdMutex.lock()
     objectIdSeed += 1
+    objectIdMutex.unlock()
     return objectIdSeed
 }

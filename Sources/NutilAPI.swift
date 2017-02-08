@@ -55,10 +55,10 @@ public protocol HttpResponse {
 public protocol WebSocket {
     func connect(_ ws_url: String, _ cb: @escaping (KMError) -> Void) -> KMError
     func attachFd(_ fd: SOCKET_FD, _ initData: UnsafeRawPointer?, _ initSize: Int) -> KMError
-    func sendData(_ data: UnsafeRawPointer, _ len: Int) -> Int
+    func sendData(_ data: UnsafeRawPointer, _ len: Int, _ isText: Bool, _ fin: Bool) -> Int
     func close()
     
-    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer, Int) -> Void) -> Self
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer?, Int, Bool) -> Void) -> Self
     @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self
     @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self
 }
