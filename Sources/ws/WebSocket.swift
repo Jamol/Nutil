@@ -8,7 +8,7 @@
 
 import Foundation
 
-typealias WSDataCallback = (UnsafeMutableRawPointer?, Int, Bool) -> Void
+typealias WSDataCallback = (UnsafeMutableRawPointer?, Int, Bool/*isText*/, Bool/*fin*/) -> Void
 class WebSocketImpl : TcpConnection, WebSocket {
     fileprivate var handler = WSHandler()
     fileprivate var hdrBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: kWSMaxHeaderSize)
@@ -204,25 +204,28 @@ class WebSocketImpl : TcpConnection, WebSocket {
     }
     
     fileprivate func onWsFrame(_ opcode: WSOpcode, _ fin:Bool, _ payload: UnsafeMutableRawPointer?, _ plen: Int) {
-        if isControlFrame(opcode.rawValue) {
-            if opcode == .close {
-                var statusCode: UInt16 = 0
-                if plen >= 2 {
-                    let ptr = payload!.assumingMemoryBound(to: UInt8.self)
-                    statusCode = decode_u16(ptr)
-                    infoTrace("WebSocket.onWsFrame, close-frame, statusCode=\(statusCode), plen=\(plen)")
-                } else {
-                    infoTrace("WebSocket.onWsFrame, close-frame received")
-                }
-                _ = sendCloseFrame(statusCode)
-                cleanup()
-                setState(.error)
-                cbError?(.failed)
-            } else if opcode == .ping {
-                _ = sendPongFrame(payload, plen)
+        switch opcode {
+        case .text, .binary:
+            cbData?(payload, plen, opcode == .text, fin)
+        case .close:
+            var statusCode: UInt16 = 0
+            if plen >= 2 {
+                let ptr = payload!.assumingMemoryBound(to: UInt8.self)
+                statusCode = decode_u16(ptr)
+                infoTrace("WebSocket.onWsFrame, close-frame, statusCode=\(statusCode), plen=\(plen)")
+            } else {
+                infoTrace("WebSocket.onWsFrame, close-frame received")
             }
-        } else {
-            cbData?(payload, plen, fin)
+            _ = sendCloseFrame(statusCode)
+            cleanup()
+            setState(.error)
+            cbError?(.failed)
+        case .ping:
+            _ = sendPongFrame(payload, plen)
+        case .invalid(let code):
+            warnTrace("WebSocket.onWsFrame, invalid opcode: \(code)")
+        default:
+            break
         }
     }
     

@@ -58,7 +58,7 @@ public protocol WebSocket {
     func sendData(_ data: UnsafeRawPointer, _ len: Int, _ isText: Bool, _ fin: Bool) -> Int
     func close()
     
-    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer?, Int, Bool) -> Void) -> Self
+    @discardableResult func onData(_ cb: @escaping (UnsafeMutableRawPointer?, Int, Bool/*isText*/, Bool/*fin*/) -> Void) -> Self
     @discardableResult func onError(_ cb: @escaping (KMError) -> Void) -> Self
     @discardableResult func onSend(_ cb: @escaping () -> Void) -> Self
 }

@@ -24,13 +24,42 @@ enum WSError {
     case closed
 }
 
-enum WSOpcode : UInt8 {
-    case _continue_ = 0
-    case text   = 1
-    case binary = 2
-    case close  = 8
-    case ping   = 9
-    case pong   = 10
+enum WSOpcode: Equatable {
+    case _continue_
+    case text
+    case binary
+    case close
+    case ping
+    case pong
+    case invalid(code: UInt8)
+    
+    init(code: UInt8) {
+        switch code {
+        case 0:  self = ._continue_
+        case 1:  self = .text
+        case 2:  self = .binary
+        case 8:  self = .close
+        case 9:  self = .ping
+        case 10: self = .pong
+        default: self = .invalid(code: code)
+        }
+    }
+    
+    var code: UInt8 {
+        switch self {
+        case ._continue_: return 0
+        case .text: return 1
+        case .binary: return 2
+        case .close: return 8
+        case .ping: return 9
+        case .pong: return 10
+        case .invalid(let code): return code
+        }
+    }
+    
+    var isControl: Bool {
+        return self == .close || self == .ping || self == .pong
+    }
 }
 
 enum WSMode {
@@ -53,7 +82,7 @@ class WSHandler : HttpParserDelegate {
     
     struct FrameHeader {
         var fin = false
-        var opcode: UInt8 = 0
+        var opcode = WSOpcode.invalid(code: 0xFF)
         var mask = false
         var plen: UInt8 = 0
         var xpl: UInt64 = 0
@@ -62,7 +91,7 @@ class WSHandler : HttpParserDelegate {
         
         mutating func reset() {
             fin = false
-            opcode = 0
+            opcode = .invalid(code: 0xFF)
             mask = false
             plen = 0
             xpl = 0
@@ -186,7 +215,7 @@ class WSHandler : HttpParserDelegate {
     }
     
     func encodeFrameHeader(_ opcode: WSOpcode, _ fin: Bool, _ mkey: [UInt8]?, _ plen: Int, _ hdrBuffer: UnsafeMutablePointer<UInt8>) -> Int {
-        var firstByte: UInt8 = opcode.rawValue
+        var firstByte: UInt8 = opcode.code
         if fin {
             firstByte |= 0x80
         }
@@ -235,12 +264,12 @@ class WSHandler : HttpParserDelegate {
                 b = data[pos]
                 pos += 1
                 dctx.hdr.fin = (b >> 7) != 0
-                dctx.hdr.opcode = b & 0x0F
+                dctx.hdr.opcode = WSOpcode(code: (b & 0x0F))
                 if (b & 0x70) != 0 {
                     dctx.state = .error
                     return .invalidFrame
                 }
-                if !dctx.hdr.fin && isControlFrame(dctx.hdr.opcode) {
+                if !dctx.hdr.fin && dctx.hdr.opcode.isControl {
                     // Control frames MUST NOT be fragmented
                     dctx.state = .error
                     return .protocolError
@@ -255,7 +284,7 @@ class WSHandler : HttpParserDelegate {
                 dctx.hdr.xpl = 0
                 dctx.pos = 0
                 dctx.buf = []
-                if isControlFrame(dctx.hdr.opcode) && dctx.hdr.plen > 125 {
+                if dctx.hdr.opcode.isControl && dctx.hdr.plen > 125 {
                     // the payload length of control frames MUST <= 125
                     dctx.state = .error
                     return .protocolError
@@ -352,7 +381,7 @@ class WSHandler : HttpParserDelegate {
                         _ = handleFrame(dctx.hdr, ptr!, dctx.hdr.length)
                     }
                 }
-                if dctx.hdr.opcode == WSOpcode.close.rawValue {
+                if dctx.hdr.opcode == .close {
                     dctx.state = .closed
                     return WSError.closed
                 }
@@ -372,7 +401,7 @@ class WSHandler : HttpParserDelegate {
     }
     
     func handleFrame(_ hdr: FrameHeader, _ payload: UnsafeMutablePointer<UInt8>?, _ plen: Int) -> WSError {
-        cbFrame?(WSOpcode(rawValue: hdr.opcode)!, hdr.fin, payload, plen)
+        cbFrame?(hdr.opcode, hdr.fin, payload, plen)
         return .noErr
     }
     
@@ -409,12 +438,12 @@ extension WSHandler {
     }
 }
 
-func isControlFrame(_ opcode: UInt8) -> Bool {
-    return opcode == WSOpcode.close.rawValue || opcode == WSOpcode.ping.rawValue || opcode == WSOpcode.pong.rawValue
-}
-
 func handleDataMask(_ mkey: [UInt8], _ data: UnsafeMutablePointer<UInt8>, _ len: Int) {
     for i in 0..<len {
         data[i] ^= mkey[i%kWSMaskKeySize]
     }
+}
+
+func == (lhs: WSOpcode, rhs: WSOpcode) -> Bool {
+    return lhs.code == rhs.code
 }

@@ -72,9 +72,9 @@ let ret = ssl.connect("www.google.com", 443)
     _ = server.start(addr: "0.0.0.0", port: 8443)
 #endif
 
-#if false
+#if true
     let ws = NutilFactory.createWebSocket()
-    ws.onData { (data, len, fin) in
+    ws.onData { (data, len, isText, fin) in
         print("WebSocket.onData, len=\(len), fin=\(fin)")
         ws.close()
     }
@@ -88,7 +88,7 @@ let ret = ssl.connect("www.google.com", 443)
     }
 #endif
 
-#if true
+#if false
     var totalBytesReceived = 0
     let req = NutilFactory.createRequest(version: "HTTP/2.0")!
     req
