@@ -203,7 +203,7 @@ func alpnCallback(ssl: UnsafeMutablePointer<SSL>?, out: UnsafeMutablePointer<Uns
         return SSL_TLSEXT_ERR_OK
     }
     let alpn = arg.assumingMemoryBound(to: [UInt8].self)
-    out?.withMemoryRebound(to: (UnsafeMutablePointer<UInt8>?.self)!, capacity: 1) {
+    out?.withMemoryRebound(to: (UnsafeMutablePointer<UInt8>?.self), capacity: 1) {
         if (SSL_select_next_proto($0, outlen, alpn.pointee, UInt32(alpn.pointee.count), _in, inlen) != OPENSSL_NPN_NEGOTIATED) {
         }
     }

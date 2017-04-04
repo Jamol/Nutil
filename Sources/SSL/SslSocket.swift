@@ -194,7 +194,7 @@ extension SslSocket {
                 }
             }
             if !serverName.isEmpty {
-                sslHandler.setServerName(name: serverName)
+                _ = sslHandler.setServerName(name: serverName)
             }
         }
         

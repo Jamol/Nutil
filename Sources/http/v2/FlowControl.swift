@@ -51,7 +51,7 @@ class FlowControl {
             if localWindowSize_ < minLocalWindowSize {
                 let delta = localWindowStep - localWindowSize_
                 localWindowSize_ += delta
-                cbUpdate?(UInt32(delta) & 0xFFFFFFFF)
+                _ = cbUpdate?(UInt32(delta) & 0xFFFFFFFF)
             }
         }
     }

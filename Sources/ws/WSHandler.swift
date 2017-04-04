@@ -152,7 +152,7 @@ class WSHandler : HttpParserDelegate {
         str += "Upgrade: websocket\r\n"
         str += "Connection: Upgrade\r\n"
         str += "Sec-WebSocket-Accept: \(generateSecAcceptValue(secWsKey!))\r\n"
-        if protos != nil && !protos!.isEmpty {
+        if let protos = protos, !protos.isEmpty {
             str += "Sec-WebSocket-Protocol: \(protos)\r\n"
         }
         str += "\r\n"

@@ -591,7 +591,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     fileprivate func buildUpgradeResponse() -> String {
         var rsp = "HTTP/1.1 101 Switching Protocols\r\n"
         rsp += "Connection: Upgrade\r\n"
-        rsp += "Upgrade: \(httpParser.headers["Upgrade"])\r\n"
+        rsp += "Upgrade: \(httpParser.headers["Upgrade"]!)\r\n"
         rsp += "\r\n"
         return rsp
     }
