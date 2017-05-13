@@ -41,12 +41,15 @@ class SslHandler {
     }
     
     func setAlpnProtocols(alpn: AlpnProtos) -> Bool {
+        guard let ssl = ssl else {
+            return false
+        }
         let ret = SSL_set_alpn_protos(ssl, alpn, UInt32(alpn.count))
         return ret == 0
     }
     
     func getAlpnSelected() -> String? {
-        if ssl == nil {
+        guard let ssl = ssl else {
             return nil
         }
         var len: UInt32 = 0
@@ -61,11 +64,17 @@ class SslHandler {
     }
     
     func setServerName(name: String) -> Bool {
+        guard let ssl = ssl else {
+            return false
+        }
         let ret = SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name))
         return ret != 0
     }
     
     func setHostName(name: String) -> Bool {
+        guard let ssl = ssl else {
+            return false
+        }
         let param = SSL_get0_param(ssl);
         X509_VERIFY_PARAM_set_hostflags(param, UInt32(X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS))
         X509_VERIFY_PARAM_set1_host(param, name, name.utf8.count)
