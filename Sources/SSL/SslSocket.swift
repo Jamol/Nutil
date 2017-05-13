@@ -16,6 +16,7 @@ public enum SslFlag: UInt32 {
     case allowExpiredRoot   = 0x08
     case allowAnyRoot       = 0x10
     case allowRevokedCert   = 0x20
+    case verifyHostName     = 0x40
 }
 
 public class SslSocket {
@@ -23,6 +24,7 @@ public class SslSocket {
     fileprivate var tcpSocket: TcpSocket!
     fileprivate var alpnProtos: AlpnProtos? = nil
     fileprivate var serverName = ""
+    fileprivate var hostName = ""
     fileprivate var sslFlags: UInt32 = 0
     
     fileprivate var cbConnect: ErrorCallback?
@@ -53,6 +55,7 @@ public class SslSocket {
     }
     
     public func connect(_ addr: String, _ port: Int) -> KMError {
+        hostName = addr
         return tcpSocket.connect(addr, port)
     }
     
@@ -111,8 +114,9 @@ extension SslSocket {
 
 extension SslSocket {
     func onConnect(err: KMError) {
+        var err = err
         if err == .noError {
-            let err = startSslHandshake(.client)
+            err = startSslHandshake(.client)
             if err == .noError && sslHandler.getState() == .handshake {
                 return // continue to SSL handshake
             }
@@ -186,7 +190,15 @@ extension SslSocket {
     func startSslHandshake(_ role: SslRole) -> KMError {
         infoTrace("startSslHandshake, role=\(role), fd=\(tcpSocket.fd), state=\(tcpSocket.state)")
         sslHandler.close()
-        try? sslHandler.attachFd(fd: tcpSocket.fd, role: role)
+        do {
+            try sslHandler.attachFd(fd: tcpSocket.fd, role: role)
+        } catch NUError.ssl(let code) {
+            errTrace("startSslHandshake, SSL error, code=\(code)")
+            return .sslError
+        } catch {
+            errTrace("startSslHandshake, failed")
+            return .sockError
+        }
         if (role == .client) {
             if let alpn = alpnProtos {
                 if !sslHandler.setAlpnProtocols(alpn: alpn) {
@@ -195,6 +207,9 @@ extension SslSocket {
             }
             if !serverName.isEmpty {
                 _ = sslHandler.setServerName(name: serverName)
+            }
+            if !hostName.isEmpty && (sslFlags & SslFlag.verifyHostName.rawValue) != 0 {
+                _ = sslHandler.setHostName(name: hostName)
             }
         }
         

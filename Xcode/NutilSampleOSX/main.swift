@@ -72,7 +72,7 @@ let ret = ssl.connect("www.google.com", 443)
     _ = server.start(addr: "0.0.0.0", port: 8443)
 #endif
 
-#if true
+#if false
     let ws = NutilFactory.createWebSocket()
     ws.onData { (data, len, isText, fin) in
         print("WebSocket.onData, len=\(len), fin=\(fin)")
@@ -88,13 +88,14 @@ let ret = ssl.connect("www.google.com", 443)
     }
 #endif
 
-#if false
+#if true
     var totalBytesReceived = 0
     let req = NutilFactory.createRequest(version: "HTTP/2.0")!
     req
     .onData { (data: UnsafeMutableRawPointer, len: Int) in
         totalBytesReceived += len
         print("data received, len=\(len), total=\(totalBytesReceived)")
+        print(Data.init(bytes: data, count: len))
     }
     .onHeaderComplete {
         print("header completed")
@@ -107,8 +108,8 @@ let ret = ssl.connect("www.google.com", 443)
     }
     req.addHeader("user-agent", "kuma 1.0")
     //_ = req.sendRequest("GET", "https://127.0.0.1:8443/testdata")
-    _ = req.sendRequest("GET", "http://173.39.168.25:8443/testdata")
     //_ = req.sendRequest("GET", "https://www.google.com")
+    _ = req.sendRequest("GET", "https://http2.golang.org/reqinfo")
 #endif
 
 RunLoop.main.run()

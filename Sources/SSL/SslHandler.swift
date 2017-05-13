@@ -65,6 +65,13 @@ class SslHandler {
         return ret != 0
     }
     
+    func setHostName(name: String) -> Bool {
+        let param = SSL_get0_param(ssl);
+        X509_VERIFY_PARAM_set_hostflags(param, UInt32(X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS))
+        X509_VERIFY_PARAM_set1_host(param, name, name.utf8.count)
+        return true
+    }
+    
     func attachFd(fd: SOCKET_FD, role: SslRole) throws {
         cleanup()
         isServer =  role == .server
