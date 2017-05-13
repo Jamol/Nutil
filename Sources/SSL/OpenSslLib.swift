@@ -13,7 +13,6 @@ typealias AlpnProtos = [UInt8]
 
 var alpnProtos: AlpnProtos = [2, 104, 50]
 
-fileprivate var certsPath = "./"
 fileprivate var sslCtxServer: UnsafeMutablePointer<SSL_CTX>?
 fileprivate var sslCtxClient: UnsafeMutablePointer<SSL_CTX>?
 
@@ -38,9 +37,6 @@ func initOpenSslLib() -> Bool {
         var rand_ret = arc4random()
         RAND_seed(&rand_ret, Int32(MemoryLayout.size(ofValue: rand_ret)))
     }
-    let execPath = Bundle.main.executablePath!
-    let path = (execPath as NSString).deletingLastPathComponent
-    certsPath = "\(path)/cert"
     return true
 }
 
@@ -115,8 +111,10 @@ func createSslContext(_ caFile: String, _ certFile: String, _ keyFile: String, _
             //SSL_CTX_set_cert_verify_callback(ctx, appVerifyCallback, &arg1)
         }
         SSL_CTX_set_alpn_select_cb(ctx, alpnCallback, &alpnProtos)
-        _ = _SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
-        _ = SSL_CTX_set_tlsext_servername_arg(ctx, ctx)
+        if (!clientMode) {
+            _ = _SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
+            _ = SSL_CTX_set_tlsext_servername_arg(ctx, ctx)
+        }
         ctx_ok = true
     } while false
     if !ctx_ok {
@@ -131,7 +129,7 @@ func defaultClientContext() -> UnsafeMutablePointer<SSL_CTX>!
     if sslCtxClient == nil {
         let certFile = ""
         let keyFile = ""
-        let caFile = "\(certsPath)/ca.cer"
+        let caFile = Bundle.main.path(forResource: "ca", ofType: "pem")!
         sslCtxClient = createSslContext(caFile, certFile, keyFile, true)
     }
     return sslCtxClient
@@ -140,8 +138,8 @@ func defaultClientContext() -> UnsafeMutablePointer<SSL_CTX>!
 func defaultServerContext() -> UnsafeMutablePointer<SSL_CTX>!
 {
     if sslCtxServer == nil {
-        let certFile = "\(certsPath)/server.cer"
-        let keyFile = "\(certsPath)/server.key"
+        let certFile = Bundle.main.path(forResource: "server", ofType: "cer")!
+        let keyFile = Bundle.main.path(forResource: "server", ofType: "key")!
         let caFile = ""
         sslCtxServer = createSslContext(caFile, certFile, keyFile, false)
     }

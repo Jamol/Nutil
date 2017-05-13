@@ -75,10 +75,11 @@ class SslHandler {
         guard let ssl = ssl else {
             return false
         }
+        let ret = SSL_set_tlsext_host_name(ssl, UnsafeMutablePointer<Int8>(mutating: name))
         let param = SSL_get0_param(ssl);
         X509_VERIFY_PARAM_set_hostflags(param, UInt32(X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS))
         X509_VERIFY_PARAM_set1_host(param, name, name.utf8.count)
-        return true
+        return ret != 0
     }
     
     func attachFd(fd: SOCKET_FD, role: SslRole) throws {
@@ -126,7 +127,6 @@ class SslHandler {
             errTrace("sslConnect, ssl is nil")
             return .error
         }
-        
         let ret = SSL_connect(ssl)
         let ssl_err = SSL_get_error (ssl, ret)
         switch (ssl_err)
