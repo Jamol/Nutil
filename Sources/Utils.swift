@@ -70,6 +70,21 @@ func getPeerName(_ fd: SOCKET_FD) -> (addr: String, port: Int) {
     return getNameInfo(&ssaddr)
 }
 
+func isNumericHost(_ host: String) -> Bool
+{
+    var hints = addrinfo(
+        ai_flags: AI_NUMERICHOST,
+        ai_family: AF_UNSPEC,
+        ai_socktype: SOCK_STREAM,
+        ai_protocol: 0,
+        ai_addrlen: 0,
+        ai_canonname: nil,
+        ai_addr: nil,
+        ai_next: nil)
+    var ssaddr = sockaddr_storage()
+    return getAddrInfo(host, 0, &hints, &ssaddr) == 0
+}
+
 extension sockaddr_storage {
     mutating func asSockaddrPointer() -> UnsafeMutablePointer<sockaddr> {
         let praw = UnsafeMutableRawPointer(&self)

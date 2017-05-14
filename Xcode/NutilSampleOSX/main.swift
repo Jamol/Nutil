@@ -95,7 +95,6 @@ let ret = ssl.connect("www.google.com", 443)
     .onData { (data: UnsafeMutableRawPointer, len: Int) in
         totalBytesReceived += len
         print("data received, len=\(len), total=\(totalBytesReceived)")
-        print(Data.init(bytes: data, count: len))
     }
     .onHeaderComplete {
         print("header completed")
@@ -110,6 +109,7 @@ let ret = ssl.connect("www.google.com", 443)
     //_ = req.sendRequest("GET", "https://127.0.0.1:8443/testdata")
     //_ = req.sendRequest("GET", "https://www.google.com")
     _ = req.sendRequest("GET", "https://http2.golang.org/reqinfo")
+    //_ = req.sendRequest("GET", "https://www.cloudflare.com")
 #endif
 
 RunLoop.main.run()

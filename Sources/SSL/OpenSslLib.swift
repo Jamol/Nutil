@@ -114,9 +114,11 @@ func createSslContext(_ caFile: String, _ certFile: String, _ keyFile: String, _
             //app_verify_arg arg1
             //SSL_CTX_set_cert_verify_callback(ctx, appVerifyCallback, &arg1)
         }
-        SSL_CTX_set_alpn_select_cb(ctx, alpnCallback, &alpnProtos)
-        _ = _SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
-        _ = SSL_CTX_set_tlsext_servername_arg(ctx, ctx)
+        if !clientMode {
+            SSL_CTX_set_alpn_select_cb(ctx, alpnCallback, &alpnProtos)
+            _ = _SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
+            _ = SSL_CTX_set_tlsext_servername_arg(ctx, ctx)
+        }
         ctx_ok = true
     } while false
     if !ctx_ok {
@@ -131,7 +133,7 @@ func defaultClientContext() -> UnsafeMutablePointer<SSL_CTX>!
     if sslCtxClient == nil {
         let certFile = ""
         let keyFile = ""
-        let caFile = "\(certsPath)/ca.cer"
+        let caFile = "\(certsPath)/ca.pem"
         sslCtxClient = createSslContext(caFile, certFile, keyFile, true)
     }
     return sslCtxClient
@@ -140,7 +142,7 @@ func defaultClientContext() -> UnsafeMutablePointer<SSL_CTX>!
 func defaultServerContext() -> UnsafeMutablePointer<SSL_CTX>!
 {
     if sslCtxServer == nil {
-        let certFile = "\(certsPath)/server.cer"
+        let certFile = "\(certsPath)/server.pem"
         let keyFile = "\(certsPath)/server.key"
         let caFile = ""
         sslCtxServer = createSslContext(caFile, certFile, keyFile, false)

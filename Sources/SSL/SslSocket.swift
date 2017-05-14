@@ -55,7 +55,9 @@ public class SslSocket {
     }
     
     public func connect(_ addr: String, _ port: Int) -> KMError {
-        hostName = addr
+        if !isNumericHost(addr) {
+            hostName = addr
+        }
         return tcpSocket.connect(addr, port)
     }
     
@@ -207,6 +209,8 @@ extension SslSocket {
             }
             if !serverName.isEmpty {
                 _ = sslHandler.setServerName(name: serverName)
+            } else if !hostName.isEmpty {
+                _ = sslHandler.setServerName(name: hostName)
             }
             if !hostName.isEmpty && (sslFlags & SslFlag.verifyHostName.rawValue) != 0 {
                 _ = sslHandler.setHostName(name: hostName)

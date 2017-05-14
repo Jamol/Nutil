@@ -311,7 +311,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     
     fileprivate func handlePushFrame(_ frame: PushPromiseFrame) {
         infoTrace("H2Connection.handlePushFrame, streamId=\(frame.streamId), promStreamId=\(frame.promisedStreamId), bsize=\(frame.bsize), flags=\(frame.getFlags())")
-        if !isPromisedStream(frame.streamId) {
+        if !isPromisedStream(frame.promisedStreamId) {
             warnTrace("H2Connection.handlePushFrame, invalid stream id")
             return
         }
