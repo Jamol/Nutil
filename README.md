@@ -3,7 +3,16 @@ Network protocols implementation in swift
 
 ## Implemented: TCP/UDP/HTTP/HTTP2/WebSocket
 
-## Simple example
+## SSL/TLS
+```
+certificates location is by default in /path-to-your-excutable/cert.
+
+copy all CA certificates used to cert/ca.pem
+copy your server certificate to cert/server.pem
+copy your server private key to cert/server.key
+```
+
+## Simple examples
 Please refer to project NutilSampleOSX for more examples
 
 ### WebSocket
@@ -24,7 +33,7 @@ let ret = ws.connect("wss://127.0.0.1:8443") { err in
     let ret = ws.sendData(buf, buf.count, false, true)
 }
 ```
-# HTTP request
+### HTTP request
 ```
 var totalBytesReceived = 0
 let req = NutilFactory.createRequest(version: "HTTP/2.0")!
