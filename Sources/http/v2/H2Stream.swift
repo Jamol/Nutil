@@ -23,7 +23,7 @@ class H2Stream {
     typealias HeadersCallback = (NameValueArray, Bool, Bool) -> Void
     typealias DataCallback = (UnsafeMutableRawPointer?, Int, Bool) -> Void
     typealias RSTStreamCallback = (Int) -> Void
-    typealias WriteCallback = (Void) -> Void
+    typealias WriteCallback = () -> Void
     
     var cbHeaders: HeadersCallback?
     var cbData: DataCallback?

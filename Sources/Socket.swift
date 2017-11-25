@@ -144,7 +144,7 @@ public class Socket
 }
 
 extension Socket {
-    public func sync(_ block: ((Void) -> Void)) {
+    public func sync(_ block: (() -> Void)) {
         if let q = queue {
             if isInQueue() { // avoid deadlock
                 block()
@@ -156,7 +156,7 @@ extension Socket {
         }
     }
     
-    public func async(_ block: @escaping ((Void) -> Void)) {
+    public func async(_ block: @escaping (() -> Void)) {
         if let q = queue {
             q.async(execute: block)
         }

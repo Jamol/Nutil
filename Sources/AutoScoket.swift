@@ -204,7 +204,7 @@ extension AutoScoket {
 }
 
 extension AutoScoket {
-    func sync(_ block: ((Void) -> Void)) {
+    func sync(_ block: (() -> Void)) {
         if let ssl = ssl {
             ssl.sync(block)
         }
@@ -213,7 +213,7 @@ extension AutoScoket {
         }
     }
     
-    func async(_ block: @escaping ((Void) -> Void)) {
+    func async(_ block: @escaping (() -> Void)) {
         if let ssl = ssl {
             ssl.async(block)
         }

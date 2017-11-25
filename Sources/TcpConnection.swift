@@ -268,11 +268,11 @@ extension TcpConnection
 }
 
 extension TcpConnection {
-    func sync(_ block: ((Void) -> Void)) {
+    func sync(_ block: (() -> Void)) {
         socket.sync(block)
     }
     
-    func async(_ block: @escaping ((Void) -> Void)) {
+    func async(_ block: @escaping (() -> Void)) {
         socket.async(block)
     }
 }

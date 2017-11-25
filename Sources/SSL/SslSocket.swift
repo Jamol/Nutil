@@ -226,11 +226,11 @@ extension SslSocket {
 }
 
 extension SslSocket {
-    func sync(_ block: ((Void) -> Void)) {
+    func sync(_ block: (() -> Void)) {
         tcpSocket.sync(block)
     }
     
-    func async(_ block: @escaping ((Void) -> Void)) {
+    func async(_ block: @escaping (() -> Void)) {
         tcpSocket.async(block)
     }
 }
