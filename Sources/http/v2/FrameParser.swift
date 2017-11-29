@@ -10,7 +10,7 @@
 import Foundation
 
 class FrameParser {
-    typealias H2FrameCallback = (H2Frame) -> Void
+    typealias H2FrameCallback = (H2Frame) -> Bool
     typealias H2ErrorCallback = (FrameHeader, H2Error, Bool) -> Bool
     
     var cbFrame: H2FrameCallback?
@@ -20,13 +20,19 @@ class FrameParser {
         case header, payload
     }
     
+    fileprivate var maxFrameSize = 0
+    
     fileprivate var readState = ReadState.header
     fileprivate var header = FrameHeader()
     fileprivate var payload: [UInt8] = []
     fileprivate var hdrBuffer: [UInt8] = []
     
     enum ParseState {
-        case success, incomplete, failure
+        case success, incomplete, failure, stopped
+    }
+    
+    func setMaxFrameSize(_ frameSize: Int) {
+        maxFrameSize = frameSize
     }
     
     func parseInputData(_ data: UnsafeMutableRawPointer, _ len: Int) -> ParseState {
@@ -53,13 +59,19 @@ class FrameParser {
                     ptr += kH2FrameHeaderSize
                 }
                 payload = []
+                if header.length > maxFrameSize {
+                    let streamErr = isStreamError(header, .frameSizeError)
+                    _ = cbError?(header, .frameSizeError, streamErr)
+                    return .failure
+                }
                 readState = .payload
             }
             if readState == .payload {
                 if payload.isEmpty {
                     if remain >= header.length {
-                        if !handleFrame(header, ptr) {
-                            return .failure
+                        let parseState = parseFrame(header, ptr)
+                        if parseState != .success {
+                            return parseState
                         }
                         remain -= header.length
                         ptr += header.length
@@ -82,8 +94,9 @@ class FrameParser {
                     remain -= copyLen
                     ptr += copyLen
                     readState = .header
-                    if !handleFrame(header, payload) {
-                        return .failure
+                    let parseState = parseFrame(header, payload)
+                    if parseState != .success {
+                        return parseState
                     }
                     payload = []
                 }
@@ -92,7 +105,7 @@ class FrameParser {
         return .success
     }
     
-    fileprivate func handleFrame(_ hdr: FrameHeader, _ payload: UnsafeRawPointer) -> Bool {
+    fileprivate func parseFrame(_ hdr: FrameHeader, _ payload: UnsafeRawPointer) -> ParseState {
         var frame: H2Frame?
         switch hdr.type {
         case H2FrameType.data.rawValue:
@@ -123,13 +136,34 @@ class FrameParser {
             let ptr = payload.assumingMemoryBound(to: UInt8.self)
             let err = frame.decode(hdr, ptr)
             if err == .noError {
-                cb(frame)
+                if !cb(frame) {
+                    return .stopped
+                }
             } else {
                 // TODO: set correct value to isStream
                 _ = cbError?(hdr, err, false)
+                return .failure
             }
         }
-        return true
+        return .success
+    }
+    
+    fileprivate func isStreamError(_ hdr: FrameHeader, _ err: H2Error) -> Bool {
+        if hdr.streamId == 0 {
+            return false
+        }
+        
+        switch err {
+        case .frameSizeError:
+            return hdr.type != H2FrameType.headers.rawValue &&
+                hdr.type != H2FrameType.settings.rawValue &&
+                hdr.type != H2FrameType.pushPromise.rawValue &&
+                hdr.type != H2FrameType.windowUpdate.rawValue
+        case .protocolError:
+            return false
+        default:
+            return true
+        }
     }
     
     private let dataFrame = DataFrame()

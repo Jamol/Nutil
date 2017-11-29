@@ -22,6 +22,7 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         case sendingBody
         case receivingResponse
         case completed
+        case waitForReuse
         case error
         case closed
     }
@@ -65,6 +66,9 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
     
     func sendRequest(_ method: String, _ url: String) -> KMError {
         infoTrace("Http1xRequest.sendRequest, method=\(method), url=\(url)")
+        if state == .completed {
+            reset() // reuse case
+        }
         self.url = URL(string: url)
         self.method = method
         
@@ -111,7 +115,9 @@ class Http1xRequest : TcpConnection, HttpRequest, HttpParserDelegate, MessageSen
         super.reset()
         parser.reset()
         message.reset()
-        setState(.idle)
+        if state == .completed {
+            setState(.waitForReuse)
+        }
     }
     
     override func close() {

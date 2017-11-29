@@ -154,15 +154,16 @@ class Http2Response : HttpHeader, HttpResponse {
         return (hdrList, hdrSize)
     }
     
-    fileprivate func onHeaders(headers: NameValueArray, endHeaders: Bool, endStream: Bool) {
+    fileprivate func onHeaders(headers: NameValueArray, endStream: Bool) {
         if headers.isEmpty {
             return
         }
+        var cookie = ""
         for kv in headers {
             if kv.name.isEmpty {
                 continue
             }
-            if UInt8(kv.name.utf8CString[0]) == kColon {
+            if UInt8(kv.name.utf8CString[0]) == kColon { // pseudo header
                 if kv.name.compare(kH2HeaderMethod) == .orderedSame {
                     reqMethod = kv.value
                 } else if kv.name.compare(kH2HeaderAuthority) == .orderedSame {
@@ -170,13 +171,19 @@ class Http2Response : HttpHeader, HttpResponse {
                 } else if kv.name.compare(kH2HeaderPath) == .orderedSame {
                     reqPath = kv.value
                 }
+            } else if kv.name.compare(kH2HeaderCookie) == .orderedSame {
+                if !cookie.isEmpty {
+                    cookie += "; "
+                }
+                cookie += kv.value
             } else {
                 super.headers[kv.name] = kv.value
             }
         }
-        if endHeaders {
-            cbHeader?()
+        if !cookie.isEmpty {
+            super.headers["Cookie"] = cookie
         }
+        cbHeader?()
         if endStream {
             setState(.waitForResponse)
             cbRequest?()

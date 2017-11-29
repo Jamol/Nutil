@@ -12,7 +12,6 @@ import Foundation
 class Http2Request : HttpHeader, HttpRequest {
     fileprivate var conn: H2Connection?
     fileprivate var stream: H2Stream?
-    fileprivate var wirteBlocked = false
     
     fileprivate var cbData: DataCallback?
     fileprivate var cbHeader: EventCallback?
@@ -39,6 +38,7 @@ class Http2Request : HttpHeader, HttpRequest {
         case sendingBody
         case receivingResponse
         case completed
+        case waitForReuse
         case error
         case closed
     }
@@ -58,6 +58,9 @@ class Http2Request : HttpHeader, HttpRequest {
     }
     
     func sendRequest(_ method: String, _ url: String) -> KMError {
+        if state == .completed {
+            reset() // reuse case
+        }
         self.url = URL(string: url)
         self.method = method
         
@@ -310,20 +313,12 @@ class Http2Request : HttpHeader, HttpRequest {
         return bytesSent
     }
     
-    fileprivate func onHeaders(headers: NameValueArray, endHeaders: Bool, endStream: Bool) {
-        if headers.isEmpty {
+    fileprivate func onHeaders(headers: NameValueArray, endStream: Bool) {
+        (statusCode, rspHeaders) = processH2ResponseHeaders(headers)
+        if statusCode < 0 {
             return
         }
-        if headers[0].name.compare(kH2HeaderStatus) != .orderedSame {
-            return
-        }
-        statusCode = Int(headers[0].value)!
-        for i in 1..<headers.count {
-            rspHeaders[headers[i].name] = headers[i].value
-        }
-        if endHeaders {
-            cbHeader?()
-        }
+        cbHeader?()
         if endStream {
             setState(.completed)
             cbComplete?()
@@ -369,6 +364,15 @@ class Http2Request : HttpHeader, HttpRequest {
     
     override func reset() {
         super.reset()
+        stream?.close()
+        writeBlocked = false
+        bodyBytesSent = 0
+        statusCode = 0
+        rspHeaders = [:]
+        dataList = []
+        if state == .completed {
+            setState(.waitForReuse)
+        }
     }
     
     func getStatusCode() -> Int {
@@ -405,4 +409,30 @@ extension Http2Request {
         cbSend = cb
         return self
     }
+}
+
+func processH2ResponseHeaders(_ headers: NameValueArray) -> (Int, [String: String]) {
+    if headers.isEmpty {
+        return (-1, [:])
+    }
+    if headers[0].name.compare(kH2HeaderStatus) != .orderedSame {
+        return (-1, [:])
+    }
+    let statusCode = Int(headers[0].value)!
+    var rspHeaders: [String : String] = [:]
+    var cookie = ""
+    for i in 1..<headers.count {
+        if headers[i].name.compare(kH2HeaderCookie) == .orderedSame {
+            if !cookie.isEmpty {
+                cookie += "; "
+            }
+            cookie += headers[i].value
+        } else if !headers[i].name.hasPrefix(":") {
+            rspHeaders[headers[i].name] = headers[i].value
+        }
+    }
+    if !cookie.isEmpty {
+        rspHeaders["Cookie"] = cookie
+    }
+    return (statusCode, rspHeaders)
 }

@@ -20,6 +20,7 @@ let kH2WindowUpdateFrameSize = kH2FrameHeaderSize + kH2WindowUpdatePayloadSize
 
 let kH2DefaultFrameSize = 16384
 let kH2DefaultWindowSize = 65535
+let kH2MaxFrameSize = 16777215
 let kH2MaxWindowSize = 2147483647
 
 let kH2FrameFlagEndStream: UInt8  = 0x01
@@ -72,6 +73,7 @@ let kH2HeaderScheme = ":scheme"
 let kH2HeaderAuthority = ":authority"
 let kH2HeaderPath = ":path"
 let kH2HeaderStatus = ":status"
+let kH2HeaderCookie = "cookie"
 
 struct H2Priority {
     var streamId: UInt32 = 0
@@ -546,12 +548,24 @@ class PushPromiseFrame : H2Frame {
     var block: UnsafeRawPointer?
     var bsize = 0
     
+    var headers: NameValueArray = []
+    var hsize = 0
+    
     override func type() -> H2FrameType {
         return .pushPromise
     }
     
     override func calcPayloadSize() -> Int {
         return 4 + bsize
+    }
+    
+    func hasEndHeaders() -> Bool {
+        return (getFlags() & kH2FrameFlagEndHeaders) != 0
+    }
+    
+    func setHeaders(_ headers: NameValueArray, _ hdrSize: Int) {
+        self.headers = headers
+        hsize = hdrSize
     }
     
     override func encode(_ dst: UnsafeMutablePointer<UInt8>, _ len: Int) -> Int {

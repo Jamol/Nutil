@@ -38,12 +38,20 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     
     var cmpPreface = ""  // server only
     
-    fileprivate var remoteFrameSize = kH2DefaultFrameSize
+    fileprivate var maxLocalFrameSize = 65536
+    fileprivate var maxRemoteFrameSize = kH2DefaultFrameSize
     fileprivate var initRemoteWindowSize = kH2DefaultWindowSize
     fileprivate var initLocalWindowSize = LOCAL_STREAM_INITIAL_WINDOW_SIZE  // initial local stream window size
     
     fileprivate var nextStreamId: UInt32 = 0
     fileprivate var lastStreamId: UInt32 = 0
+    
+    fileprivate var maxConcurrentStreams = 128
+    fileprivate var openedStreamCount = 0
+    
+    fileprivate var expectContinuationFrame = false
+    fileprivate var streamIdOfExpectedContinuation: UInt32 = 0
+    fileprivate var headersBlockBuffer = [UInt8]()
     
     fileprivate var prefaceReceived = false
     
@@ -67,6 +75,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         flowControl.cbUpdate = { (delta: UInt32) -> KMError in
             return self.sendWindowUpdate(0, delta: delta)
         }
+        frameParser.setMaxFrameSize(maxLocalFrameSize)
         cmpPreface = kClientConnectionPreface
         httpParser.delegate = self
         frameParser.cbFrame = onFrame
@@ -131,10 +140,14 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     }
     
     func attachStream(streamId: UInt32, rsp: Http2Response) -> KMError {
+        if isPromisedStream(streamId) {
+            return .invalidParam
+        }
         return rsp.attachStream(self, streamId)
     }
     
     override func close() {
+        infoTrace("H2Connection.close")
         if state < .open || state == .open{
             sendGoaway(.noError)
         }
@@ -227,6 +240,11 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     }
     
     fileprivate func handleDataFrame(_ frame: DataFrame) {
+        if frame.streamId == 0 {
+            // RFC 7540, 6.1
+            connectionError(.protocolError)
+            return
+        }
         flowControl.bytesReceived = frame.getPayloadLength()
         let stream = getStream(frame.streamId)
         if let stream = stream {
@@ -238,23 +256,53 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     
     fileprivate func handleHeadersFrame(_ frame: HeadersFrame) {
         infoTrace("H2Connection.handleHeadersFrame, streamId=\(frame.streamId), flags=\(frame.getFlags())")
+        if frame.streamId == 0 {
+            // RFC 7540, 6.2
+            connectionError(.protocolError)
+            return
+        }
         var stream = getStream(frame.streamId)
-        if stream == nil && !isServer {
-            warnTrace("H2Connection.handleHeadersFrame, no local stream or promised stream, streamId=\(frame.streamId)")
-            return
-        }
-        if frame.block == nil {
-            return
-        }
-        let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
-        var headers: NameValueArray = []
-        var ret: Int = -1
-        (ret, headers) = hpDecoder.decode(hdrData, frame.bsize)
-        if ret < 0 {
-            warnTrace("H2Connection.handleHeadersFrame, hpack decode failed")
-            return
-        }
         if stream == nil {
+            if frame.streamId < lastStreamId {
+                // RFC 7540, 5.1.1
+                connectionError(.protocolError)
+                return
+            }
+            if openedStreamCount + 1 > maxConcurrentStreams {
+                warnTrace("handleHeadersFrame, too many concurrent streams, streamId=\(frame.streamId), opened=\(openedStreamCount), max=\(maxConcurrentStreams)")
+                //RFC 7540, 5.1.2
+                streamError(frame.streamId, .refusedStream)
+                return
+            }
+            if !isServer {
+                warnTrace("H2Connection.handleHeadersFrame, no local stream or promised stream, streamId=\(frame.streamId)")
+                return
+            }
+        }
+        if frame.hasEndHeaders() {
+            if frame.block == nil {
+                return
+            }
+            let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
+            var headers: NameValueArray = []
+            var ret: Int = -1
+            (ret, headers) = hpDecoder.decode(hdrData, frame.bsize)
+            if ret < 0 {
+                warnTrace("H2Connection.handleHeadersFrame, hpack decode failed")
+                // RFC 7540, 4.3
+                connectionError(.compressionError)
+                return
+            }
+            frame.setHeaders(headers, 0)
+        } else {
+            expectContinuationFrame = true
+            streamIdOfExpectedContinuation = frame.streamId
+            let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
+            headersBlockBuffer = Array(UnsafeBufferPointer(start: UnsafePointer<UInt8>(hdrData), count: frame.bsize))
+        }
+        
+        if stream == nil {
+            // new stream arrived on server side
             stream = createStream(frame.streamId)
             if cbAccept != nil && !cbAccept!(frame.streamId) {
                 removeStream(frame.streamId)
@@ -262,17 +310,25 @@ class H2Connection : TcpConnection, HttpParserDelegate {
             }
             lastStreamId = frame.streamId
         }
-        frame.setHeaders(headers, 0)
+        
         stream!.handleHeadersFrame(frame)
     }
     
     fileprivate func handlePriorityFrame(_ frame: PriorityFrame) {
         infoTrace("H2Connection.handlePriorityFrame, streamId=\(frame.streamId), dep=\(frame.pri.streamId), weight=\(frame.pri.weight)")
+        if frame.streamId == 0 {
+            // RFC 7540, 6.3
+            connectionError(.protocolError)
+            return
+        }
+        let stream = getStream(frame.streamId)
+        stream?.handlePriorityFrame(frame)
     }
     
     fileprivate func handleRSTStreamFrame(_ frame: RSTStreamFrame) {
         infoTrace("H2Connection.handleRSTStreamFrame, streamId=\(frame.streamId), err=\(frame.errCode)")
         if frame.streamId == 0 {
+            // RFC 7540, 6.4
             connectionError(.protocolError)
             return
         }
@@ -284,7 +340,17 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     
     fileprivate func handleSettingsFrame(_ frame: SettingsFrame) {
         infoTrace("H2Connection.handleSettingsFrame, streamId=\(frame.streamId), count=\(frame.params.count)")
+        if frame.streamId != 0 {
+            // RFC 7540, 6.5
+            connectionError(.protocolError)
+            return
+        }
         if frame.ack {
+            if frame.params.count != 0 {
+                // RFC 7540, 6.5
+                connectionError(.frameSizeError)
+                return
+            }
             return
         } else {
             // send setings ack
@@ -293,43 +359,77 @@ class H2Connection : TcpConnection, HttpParserDelegate {
             settings.ack = true
             _ = sendH2Frame(settings)
         }
-        if frame.streamId == 0 {
-            applySettings(frame.params)
-            if !isServer && state < .open {
-                // first frame from server must be settings
-                prefaceReceived = true
-                if state == .handshake && sendBufferEmpty() {
-                    onStateOpen()
-                }
+        applySettings(frame.params)
+        if state < .open {
+            // first frame must be SETTINGS
+            prefaceReceived = true
+            if state == .handshake && sendBufferEmpty() {
+                onStateOpen()
             }
-        } else {
-            // PROTOCOL_ERROR on connection
-            // SETTINGS frames always apply to a connection, never a single stream
-            connectionError(.protocolError)
         }
     }
     
     fileprivate func handlePushFrame(_ frame: PushPromiseFrame) {
         infoTrace("H2Connection.handlePushFrame, streamId=\(frame.streamId), promStreamId=\(frame.promisedStreamId), bsize=\(frame.bsize), flags=\(frame.getFlags())")
-        if !isPromisedStream(frame.promisedStreamId) {
-            warnTrace("H2Connection.handlePushFrame, invalid stream id")
+        if frame.streamId == 0 {
+            // RFC 7540, 6.6
+            connectionError(.protocolError)
             return
         }
-        if frame.bsize > 0 {
-            let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
-            var ret: Int = -1
-            (ret, _) = hpDecoder.decode(hdrData, frame.bsize)
-            if ret < 0 {
-                warnTrace("H2Connection.handlePushFrame, hpack decode failed")
+        
+        // TODO: if SETTINGS_ENABLE_PUSH was set to 0 and got the ack,
+        // then response connection error of type PROTOCOL_ERROR
+        
+        if !isPromisedStream(frame.promisedStreamId) {
+            warnTrace("H2Connection.handlePushFrame, invalid stream id")
+            // RFC 7540, 5.1.1
+            connectionError(.protocolError)
+            return
+        }
+        let associatedStream = getStream(frame.streamId)
+        if associatedStream == nil {
+            connectionError(.protocolError)
+            return
+        }
+        if associatedStream!.state != .open && associatedStream!.state != .halfClosedL {
+            // RFC 7540, 6.6
+            connectionError(.protocolError)
+            return
+        }
+        
+        if frame.hasEndHeaders() {
+            if frame.block == nil {
                 return
             }
+            let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
+            var headers: NameValueArray = []
+            var ret: Int = -1
+            (ret, headers) = hpDecoder.decode(hdrData, frame.bsize)
+            if ret < 0 {
+                warnTrace("H2Connection.handlePushFrame, hpack decode failed")
+                // RFC 7540, 4.3
+                connectionError(.compressionError)
+                return
+            }
+            frame.setHeaders(headers, 0)
+        } else {
+            expectContinuationFrame = true
+            streamIdOfExpectedContinuation = frame.promisedStreamId
+            let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
+            headersBlockBuffer = Array(UnsafeBufferPointer(start: UnsafePointer<UInt8>(hdrData), count: frame.bsize))
         }
+        
         let stream = createStream(frame.promisedStreamId)
         stream.handlePushFrame(frame)
     }
     
     fileprivate func handlePingFrame(_ frame: PingFrame) {
         infoTrace("H2Connection.handlePingFrame, streamId=\(frame.streamId)")
+        if frame.streamId != 0 {
+            // RFC 7540, 6.7
+            connectionError(.protocolError)
+            return
+        }
         if !frame.ack {
             let pingFrame = PingFrame()
             pingFrame.streamId = 0
@@ -340,6 +440,11 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     }
     
     fileprivate func handleGoawayFrame(_ frame: GoawayFrame) {
+        if frame.streamId != 0 {
+            // RFC 7540, 6.8
+            connectionError(.protocolError)
+            return
+        }
         super.close()
         var sss = streams
         streams = [:]
@@ -353,14 +458,16 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         }
         let cb = cbError
         cbError = nil
-        if !connKey.isEmpty {
-            let connMgr = H2ConnectionMgr.getRequestConnMgr(sslEnabled())
-            connMgr.removeConnection(connKey)
-        }
+        removeSelf()
         cb?(Int(frame.errCode))
     }
     
     fileprivate func handleWindowUpdateFrame(_ frame: WindowUpdateFrame) {
+        if frame.windowSizeIncrement == 0 {
+            // RFC 7540, 6.9
+            streamError(frame.streamId, .protocolError)
+            return
+        }
         if flowControl.remoteWindowSize + Int(frame.windowSizeIncrement) > kH2MaxWindowSize {
             if frame.streamId == 0 {
                 connectionError(.flowControlError)
@@ -397,16 +504,33 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     
     fileprivate func handleContinuationFrame(_ frame: ContinuationFrame) {
         infoTrace("H2Connection.handleContinuationFrame, streamId=\(frame.streamId)")
+        if frame.streamId == 0 {
+            // RFC 7540, 6.10
+            connectionError(.protocolError)
+            return
+        }
+        if !expectContinuationFrame {
+            // RFC 7540, 6.10
+            connectionError(.protocolError)
+            return
+        }
         if let stream = getStream(frame.streamId), frame.bsize > 0 {
             let hdrData = frame.block!.assumingMemoryBound(to: UInt8.self)
-            var headers: NameValueArray = []
-            var ret: Int = -1
-            (ret, headers) = hpDecoder.decode(hdrData, frame.bsize)
-            if ret < 0 {
-                warnTrace("H2Connection.handleContinuationFrame, hpack decode failed")
-                return
+            headersBlockBuffer += Array(UnsafeBufferPointer(start: hdrData, count: frame.bsize))
+            if frame.hasEndHeaders() {
+                var headers: NameValueArray = []
+                var ret: Int = -1
+                (ret, headers) = hpDecoder.decode(headersBlockBuffer, headersBlockBuffer.count)
+                if ret < 0 {
+                    errTrace("H2Connection.handleContinuationFrame, hpack decode failed")
+                    // RFC 7540, 4.3
+                    connectionError(.compressionError)
+                    return
+                }
+                frame.headers = headers
+                expectContinuationFrame = false
+                headersBlockBuffer = []
             }
-            frame.headers = headers
             stream.handleContinuationFrame(frame)
         }
     }
@@ -418,8 +542,11 @@ class H2Connection : TcpConnection, HttpParserDelegate {
             return parseInputData(data, len)
         } else if state == .upgrading {
             let ret = httpParser.parse(data: data, len: len)
-            if state == .error || state == .closed {
+            if state == .error {
                 return false
+            }
+            if state == .closed {
+                return true
             }
             if ret >= len {
                 return true
@@ -430,7 +557,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         }
         
         if state == .handshake {
-            if isServer {
+            if isServer && cmpPreface.utf8.count > 0 {
                 let cmpSize = min(cmpPreface.utf8.count, len)
                 if memcmp(cmpPreface, data, cmpSize) != 0 {
                     errTrace("H2Connection.handleInputData, invalid protocol")
@@ -439,16 +566,15 @@ class H2Connection : TcpConnection, HttpParserDelegate {
                     return false
                 }
                 let index = cmpPreface.index(cmpPreface.startIndex, offsetBy: cmpSize)
-                cmpPreface = cmpPreface.substring(from: index)
+                cmpPreface = String(cmpPreface[index...])
                 if !cmpPreface.isEmpty {
                     return true // need more data
                 }
-                prefaceReceived = true
-                onStateOpen()
-                return parseInputData(data + cmpSize, len - cmpSize)
-            } else {
-                return parseInputData(data, len)
+                len -= cmpSize
+                data += cmpSize
             }
+            // expect a SETTINGS frame
+            return parseInputData(data, len)
         } else {
             warnTrace("H2Connection.handleInputData, invalid state: \(state)")
         }
@@ -460,8 +586,8 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         if state == .error || state == .closed {
             return false
         }
-        if parseState == .failure {
-            errTrace("H2Connection.parseInputData, failed, len=\(len)")
+        if parseState == .failure || parseState == .stopped {
+            errTrace("H2Connection.parseInputData, failed, len=\(len), state=\(state)")
             setState(.closed)
             cleanup()
             return false
@@ -469,7 +595,21 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         return true
     }
     
-    fileprivate func onFrame(_ frame: H2Frame) {
+    fileprivate func onFrame(_ frame: H2Frame) -> Bool {
+        if state == .handshake && frame.type() != .settings {
+            // RFC 7540, 3.5
+            // the first frame must be SETTINGS, otherwise PROTOCOL_ERROR on connection
+            errTrace("onFrame, the first frame is not SETTINGS, type=\(frame.type())")
+            state = .closed
+            cbError?(Int(H2Error.protocolError.rawValue))
+            return false
+        }
+        if expectContinuationFrame &&
+            (frame.type() != .continuation ||
+             frame.streamId != streamIdOfExpectedContinuation) {
+            connectionError(.protocolError)
+            return false
+        }
         switch frame.type() {
         case .data:
             handleDataFrame(frame as! DataFrame)
@@ -492,17 +632,21 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         case .continuation:
             handleContinuationFrame(frame as! ContinuationFrame)
         }
+        return true
     }
     
     fileprivate func onFrameError(_ hdr: FrameHeader, _ err: H2Error, stream: Bool) -> Bool {
         errTrace("H2Connection.onFrameError, streamId=\(hdr.streamId), type=\(hdr.type), err=\(err)")
-        if !stream {
+        if stream {
+            streamError(hdr.streamId, err)
+        } else {
             connectionError(err)
         }
         return true
     }
     
     fileprivate func addStream(_ stream: H2Stream) {
+        infoTrace("H2Connection.addStream, streamId=\(stream.getStreamId())")
         if isPromisedStream(stream.getStreamId()) {
             promisedStreams[stream.getStreamId()] = stream
         } else {
@@ -519,6 +663,7 @@ class H2Connection : TcpConnection, HttpParserDelegate {
     }
     
     func removeStream(_ streamId: UInt32) {
+        infoTrace("H2Connection.removeStream, streamId=\(streamId)")
         if isPromisedStream(streamId) {
             promisedStreams.removeValue(forKey: streamId)
         } else {
@@ -682,9 +827,28 @@ class H2Connection : TcpConnection, HttpParserDelegate {
             case H2SettingsID.headerTableSize.rawValue:
                 hpDecoder.setMaxTableSize(Int(kv.value))
             case H2SettingsID.initialWindowSize.rawValue:
+                if kv.value > kH2MaxWindowSize {
+                    // RFC 7540, 6.5.2
+                    connectionError(.flowControlError)
+                    return
+                }
                 updateInitialWindowSize(Int(kv.value))
             case H2SettingsID.maxFrameSize.rawValue:
-                remoteFrameSize = Int(kv.value)
+                if kv.value < kH2DefaultFrameSize || kv.value > kH2MaxFrameSize {
+                    // RFC 7540, 6.5.2
+                    connectionError(.protocolError)
+                    return
+                }
+                maxRemoteFrameSize = Int(kv.value)
+            case H2SettingsID.maxConcurrentStreams.rawValue:
+                break
+            case H2SettingsID.enablePush.rawValue:
+                if kv.value != 0 && kv.value != 1 {
+                    // RFC 7540, 6.5.2
+                    connectionError(.protocolError)
+                    return
+                }
+                break
             default:
                 break
             }
@@ -704,17 +868,30 @@ class H2Connection : TcpConnection, HttpParserDelegate {
         }
     }
     
-    fileprivate func connectionError(_ err: H2Error) {
+    func connectionError(_ err: H2Error) {
         sendGoaway(err)
         setState(.closed)
         cbError?(Int(err.rawValue))
     }
     
     fileprivate func streamError(_ streamId: UInt32, _ err: H2Error) {
-        let frame = RSTStreamFrame()
-        frame.streamId = streamId
-        frame.errCode = UInt32(err.rawValue)
-        _ = sendH2Frame(frame)
+        let stream = getStream(streamId)
+        if stream != nil {
+            stream!.streamError(err)
+        } else {
+            let frame = RSTStreamFrame()
+            frame.streamId = streamId
+            frame.errCode = UInt32(err.rawValue)
+            _ = sendH2Frame(frame)
+        }
+    }
+    
+    func streamOpened(_ streamId: UInt32) {
+        openedStreamCount += 1
+    }
+    
+    func streamClosed(_ streamId: UInt32) {
+        openedStreamCount -= 1
     }
     
     fileprivate func isControlFrame(_ frame: H2Frame) -> Bool {

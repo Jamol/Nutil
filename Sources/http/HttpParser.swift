@@ -308,8 +308,8 @@ class HttpParser : HttpHeader {
             return false
         }
         let index = line.index(before: r.upperBound)
-        let name = line.substring(to: index).trimmingCharacters(in: .whitespaces)
-        let value = line.substring(from: r.upperBound).trimmingCharacters(in: .whitespaces)
+        let name = line[..<index].trimmingCharacters(in: .whitespaces)
+        let value = line[r.upperBound...].trimmingCharacters(in: .whitespaces)
         super.addHeader(name, value)
         return true
     }
@@ -476,6 +476,6 @@ class HttpParser : HttpHeader {
         if s.distance(from: s.startIndex, to: index) > 0 && s[index] == "\r" {
             index = s.index(before: index)
         }
-        return (s.substring(to: index), s.distance(from: s.startIndex, to: r.upperBound) + 1)
+        return (String(s[..<index]), s.distance(from: s.startIndex, to: r.upperBound) + 1)
     }
 }
